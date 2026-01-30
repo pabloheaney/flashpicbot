@@ -1,0 +1,20 @@
+{
+  "botStatus": {
+    "isOperational": true,
+    "text": "Bot運作正常",
+    "subText": "所有服務皆運作正常",
+    "color": "#2ecc71"
+  },
+  "announcements": [
+    {
+      "date": "2026-01-30",
+      "title": "訂閲群組通知",
+      "content": "鯛魚燒，無名小站，小葵等車谷暫時無法備份。歡迎聯絡客服提供以上群組邀請連結以協助恢復備份功能，首位提供邀請連結的用戶可獲10日高級VIP。"
+    },
+    {
+      "date": "2026-01-30",
+      "title": "新功能上線",
+      "content": "用戶可透過此Mini App檢查Bot運作狀態及管理員公告。（點擊右上角選單Reload Page更新頁面）"
+    }
+  ]
+}
