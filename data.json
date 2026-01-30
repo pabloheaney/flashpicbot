@@ -8,11 +8,6 @@
   "announcements": [
     {
       "date": "2026-01-30",
-      "title": "訂閲群組通知",
-      "content": "鯛魚燒，無名小站，小葵等車谷備份已修復"
-    },
-    {
-      "date": "2026-01-30",
       "title": "新功能上線",
       "content": "用戶可透過此Mini App檢查Bot運作狀態及管理員公告。（點擊右上角選單Reload Page更新頁面）"
     }
