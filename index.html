@@ -116,7 +116,11 @@
 
     async function loadData() {
         try {
-            const response = await fetch('data.json?t=' + new Date().getTime());
+            // 修改處：將原本的 'data.json' 替換為你的 Cloudflare Worker 網址
+            // 加上時間戳記 (?t=...) 避免瀏覽器快取舊資料
+            const apiUrl = 'https://atlrunner.dpdns.org/?t=' + new Date().getTime();
+            
+            const response = await fetch(apiUrl);
             
             if (!response.ok) {
                 throw new Error('無法讀取資料');
@@ -127,7 +131,8 @@
 
         } catch (error) {
             console.error('Error loading data:', error);
-            document.getElementById('loading').innerText = "無法載入公告，請稍後再試。";
+            // 當 API 失敗時，顯示更友善的錯誤訊息
+            document.getElementById('loading').innerText = "無法連線至狀態伺服器，請檢查網路。";
         }
     }
 
@@ -137,6 +142,7 @@
         const statusText = document.getElementById('status-text');
         const statusSubtext = document.getElementById('status-subtext');
 
+        // 渲染 Bot 狀態
         if (data.botStatus) {
             statusText.innerText = data.botStatus.text;
             statusSubtext.innerText = data.botStatus.subText;
@@ -150,6 +156,7 @@
         announcementsContainer.innerHTML = '';
         loadingDiv.style.display = 'none';
 
+        // 渲染公告列表
         if (data.announcements && data.announcements.length > 0) {
             data.announcements.forEach(item => {
                 const contentHtml = item.content.replace(/\n/g, '<br>');
@@ -168,6 +175,7 @@
         }
     }
 
+    // 啟動載入
     loadData();
 
 </script>
