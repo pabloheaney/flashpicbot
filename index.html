@@ -19,7 +19,6 @@
             margin: 0 auto;
         }
 
-        /* 狀態卡片樣式 */
         .status-card {
             background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
             border-radius: 12px;
@@ -43,7 +42,6 @@
             font-size: 1.2em;
         }
 
-        /* 公告列表樣式 */
         .announcement {
             border-bottom: 1px solid var(--tg-theme-hint-color, #ccc);
             padding: 15px 0;
@@ -139,7 +137,6 @@
         const statusText = document.getElementById('status-text');
         const statusSubtext = document.getElementById('status-subtext');
 
-        // 渲染 Bot 狀態
         if (data.botStatus) {
             statusText.innerText = data.botStatus.text;
             statusSubtext.innerText = data.botStatus.subText;
@@ -153,7 +150,6 @@
         announcementsContainer.innerHTML = '';
         loadingDiv.style.display = 'none';
 
-        // 渲染公告列表
         if (data.announcements && data.announcements.length > 0) {
             data.announcements.forEach(item => {
                 const contentHtml = item.content.replace(/\n/g, '<br>');
@@ -172,7 +168,6 @@
         }
     }
 
-    // 啟動載入
     loadData();
 
 </script>
