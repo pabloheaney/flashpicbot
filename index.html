@@ -116,8 +116,6 @@
 
     async function loadData() {
         try {
-            // 修改處：將原本的 'data.json' 替換為你的 Cloudflare Worker 網址
-            // 加上時間戳記 (?t=...) 避免瀏覽器快取舊資料
             const apiUrl = 'https://atlrunner.dpdns.org/?t=' + new Date().getTime();
             
             const response = await fetch(apiUrl);
@@ -131,7 +129,6 @@
 
         } catch (error) {
             console.error('Error loading data:', error);
-            // 當 API 失敗時，顯示更友善的錯誤訊息
             document.getElementById('loading').innerText = "無法連線至狀態伺服器，請檢查網路。";
         }
     }
