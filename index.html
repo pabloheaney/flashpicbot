@@ -1,176 +1,610 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Bot公告與狀態</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>閃圖助手Mini App</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;900&display=swap');
+
+        :root {
+            --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--tg-theme-bg-color, #fff);
-            color: var(--tg-theme-text-color, #000);
-            margin: 0;
-            padding: 20px;
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #0f172a;
+            background-image: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
+            padding-top: 80px;
+            padding-bottom: calc(80px + var(--safe-area-inset-bottom)); 
         }
 
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .status-card {
-            background-color: var(--tg-theme-secondary-bg-color, #f0f0f0);
-            border-radius: 12px;
-            padding: 20px;
-            text-align: center;
-            margin-bottom: 24px;
+        /* 頂部狀態列 */
+        .stats-bar {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 70px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
             transition: all 0.3s ease;
         }
 
-        .status-indicator {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background-color: #ccc;
-            margin-right: 8px;
-        }
+        body.vip-standard .stats-bar { border-bottom: 1px solid #94a3b8; background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(51, 65, 85, 0.95)); }
+        body.vip-premium .stats-bar { border-bottom: 1px solid #eab308; background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(88, 28, 135, 0.95)); }
 
-        .status-text {
-            font-weight: bold;
-            font-size: 1.2em;
-        }
-
-        .announcement {
-            border-bottom: 1px solid var(--tg-theme-hint-color, #ccc);
-            padding: 15px 0;
-            animation: fadeIn 0.5s ease;
-        }
-
-        .announcement:last-child {
-            border-bottom: none;
-        }
-
-        .date {
-            font-size: 0.85em;
-            color: var(--tg-theme-hint-color, #888);
-            margin-bottom: 5px;
-        }
-
-        .title {
-            font-weight: 600;
-            margin-bottom: 8px;
-            display: block;
-            font-size: 1.05em;
-        }
-
-        h2 {
-            font-size: 1.1em;
-            color: var(--tg-theme-link-color, #2481cc);
-            border-bottom: 2px solid var(--tg-theme-secondary-bg-color, #f0f0f0);
-            padding-bottom: 10px;
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* 底部導航列 */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0; left: 0; width: 100%;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+            display: flex; justify-content: space-around;
+            padding-bottom: var(--safe-area-inset-bottom);
         }
         
-        #loading {
-            text-align: center;
-            color: var(--tg-theme-hint-color, #888);
-            padding: 20px;
+        .nav-item {
+            flex: 1; padding: 12px 0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+            color: #64748b; transition: all 0.2s; cursor: pointer;
+        }
+        .nav-item.active { color: #60a5fa; text-shadow: 0 0 10px rgba(96, 165, 250, 0.5); }
+        .nav-item.active svg { stroke: #60a5fa; transform: translateY(-2px); }
+        .nav-item svg { transition: transform 0.2s; }
+
+        /* 左右滑動視窗 (Slider) 核心 CSS */
+        .slider-viewport {
+            width: 100%;
+            overflow-x: hidden; /* 隱藏水平捲軸 */
+            position: relative;
+        }
+        .slider-container {
+            display: flex;
+            width: 200%; /* 兩個分頁，所以總寬度是視窗的 2 倍 */
+            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+            will-change: transform;
+            align-items: flex-start; /* 防止兩個頁面互相拉長到一樣高 */
+        }
+        .slide-page {
+            width: 50%; /* 每個頁面佔容器的 50% (等於視窗的 100%) */
+            flex-shrink: 0;
+            opacity: 0.5; /* 非作用中頁面稍微降低透明度，提升切換時的層次感 */
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .slide-page.active {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* 抽卡系統樣式 */
+        .scene { perspective: 1000px; cursor: pointer; width: 100%; aspect-ratio: 2/3; }
+        .card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1), box-shadow 0.3s ease; border-radius: 12px; }
+        .card.is-flipped { transform: rotateY(180deg); }
+        .card::after { content: ''; position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px; border-radius: 14px; z-index: -1; opacity: 0; transition: opacity 0.3s ease, box-shadow 0.3s ease; }
+        @media (hover: hover) { .scene:hover .card:not(.is-flipped)::after { opacity: 1; } }
+        .card.is-peeking:not(.is-flipped)::after { opacity: 1; }
+
+        .rarity-common .card::after { box-shadow: 0 0 15px 2px rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.3); }
+        .rarity-common .card-front { border: 2px solid #ccc; background: linear-gradient(135deg, #e0e0e0, #f3f4f6); color: #333; }
+        .rarity-advanced .card::after { box-shadow: 0 0 15px 3px rgba(59, 130, 246, 0.7); background: rgba(59, 130, 246, 0.4); }
+        .rarity-advanced .card-front { border: 2px solid #3b82f6; background: linear-gradient(135deg, #eff6ff, #bfdbfe); color: #1e40af; }
+        .rarity-rare .card::after { box-shadow: 0 0 20px 4px rgba(168, 85, 247, 0.8); background: rgba(168, 85, 247, 0.5); }
+        .rarity-rare .card-front { border: 2px solid #a855f7; background: linear-gradient(135deg, #faf5ff, #e9d5ff); color: #6b21a8; }
+        .rarity-legendary .card::after { box-shadow: 0 0 25px 6px rgba(234, 179, 8, 0.9); background: rgba(234, 179, 8, 0.6); animation: pulse-gold 2s infinite; }
+        .rarity-legendary .card-front { border: 2px solid #eab308; background: linear-gradient(135deg, #fefce8, #fef08a); color: #854d0e; box-shadow: inset 0 0 20px rgba(234, 179, 8, 0.5); }
+
+        @keyframes pulse-gold { 0% { box-shadow: 0 0 20px 5px rgba(234, 179, 8, 0.7); } 50% { box-shadow: 0 0 30px 10px rgba(250, 204, 21, 0.9); } 100% { box-shadow: 0 0 20px 5px rgba(234, 179, 8, 0.7); } }
+
+        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; overflow: hidden; }
+        .card-back { background: #1e293b; background-image: radial-gradient(#334155 15%, transparent 16%), radial-gradient(#334155 15%, transparent 16%); background-size: 20px 20px; background-position: 0 0, 10px 10px; border: 2px solid #4b5563; }
+        .card-back-logo { width: 50%; height: 50%; opacity: 0.3; color: white; }
+        .card-front { transform: rotateY(180deg); padding: 10px; text-align: center; }
+
+        .flash { animation: flash-animation 0.5s ease-out; }
+        @keyframes flash-animation { 0% { filter: brightness(3); scale: 1.05; } 100% { filter: brightness(1); scale: 1; } }
+        
+        #particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+
+        .btn-glow { box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); transition: all 0.3s ease; }
+        .btn-glow:not(:disabled):active { transform: translateY(1px); }
+        .btn-glow:disabled { background: #334155; border-color: #475569; color: #94a3b8; cursor: not-allowed; box-shadow: none; transform: none; }
+        .btn-secondary { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); transition: all 0.2s; }
+        
+        .amount-text { font-size: 2.5rem; font-weight: 900; line-height: 1; }
+        .rarity-legendary .amount-text { text-shadow: 0 2px 4px rgba(0,0,0,0.2); font-size: 3rem; }
+
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; backdrop-filter: blur(5px); }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal-content { background: #1e293b; border: 1px solid #475569; border-radius: 16px; width: 90%; max-width: 400px; padding: 24px; transform: translateY(20px); transition: transform 0.3s ease; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
+        .modal-overlay.active .modal-content { transform: translateY(0); }
+
+        /* 公告樣式強化 */
+        .announcement-card {
+            background: rgba(30, 41, 59, 0.7);
+            border: 1px solid rgba(71, 85, 105, 0.5);
+            border-radius: 12px; padding: 16px; margin-bottom: 16px;
         }
     </style>
 </head>
-<body>
+<body class="flex flex-col items-center">
 
-<div class="container">
-    <div class="status-card" id="status-card" style="display:none;">
-        <span class="status-indicator" id="status-indicator"></span>
-        <span class="status-text" id="status-text">載入中...</span>
-        <div id="status-subtext" style="font-size: 0.9em; margin-top: 5px; opacity: 0.8;"></div>
+    <div class="stats-bar">
+        <div class="flex items-center gap-2">
+            <div class="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center shadow-lg">
+                <i data-lucide="sparkles" size="16"></i>
+            </div>
+            <div>
+                <div class="text-[10px] text-slate-400 uppercase tracking-wider hidden md:block">持有閃卡</div>
+                <div class="font-bold text-lg md:text-xl leading-none" id="balance-display">0</div>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1 px-2 py-1 rounded-lg bg-slate-800/50 border border-slate-700/50" id="vip-status-container">
+                <div class="w-5 h-5 rounded-full flex items-center justify-center" id="vip-icon">
+                    <i data-lucide="user" size="12" class="text-slate-400"></i>
+                </div>
+                <span class="text-xs font-bold text-slate-400" id="vip-name">無 VIP</span>
+            </div>
+            <div class="flex flex-col items-end text-right border-l border-slate-700 pl-3">
+                <div class="font-bold text-sm leading-none text-blue-300 max-w-[100px] truncate" id="tg-username">載入中...</div>
+                <div class="text-[10px] text-slate-500 font-mono" id="tg-userid">請稍候</div>
+            </div>
+        </div>
     </div>
 
-    <h2>最新公告</h2>
-    
-    <div id="loading">載入資料中...</div>
-
-    <div id="announcements"></div>
-</div>
-
-<script>
-    const tg = window.Telegram.WebApp;
-
-    tg.ready();
-    tg.expand();
-    
-    tg.MainButton.setText("關閉");
-    tg.MainButton.show();
-    tg.MainButton.onClick(function(){
-        tg.close();
-    });
-
-    async function loadData() {
-        try {
-            const apiUrl = 'https://atlrunner.dpdns.org/?t=' + new Date().getTime();
+    <div class="slider-viewport">
+        <div class="slider-container" id="slider-container">
             
-            const response = await fetch(apiUrl);
-            
-            if (!response.ok) {
-                throw new Error('無法讀取資料');
+            <div id="view-gacha" class="slide-page active">
+                <header class="text-center mb-6 mt-4 relative z-10 px-4 w-full">
+                    <h1 class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-purple-300 to-yellow-300 mb-2 drop-shadow-lg">
+                        每日抽一抽
+                    </h1>
+                    <p class="text-slate-400 text-sm md:text-base">每日免費十連抽，兌換免費VIP</p>
+                </header>
+
+                <div class="mb-8 z-10 flex flex-wrap justify-center gap-4 w-full px-4">
+                    <button id="summon-btn" onclick="drawCards()" class="btn-glow bg-gradient-to-r from-blue-600 to-indigo-700 text-white font-bold py-3 px-8 rounded-full text-xl flex items-center gap-2 border border-blue-400 disabled:opacity-50">
+                        <i data-lucide="sparkles" id="summon-btn-icon"></i>
+                        <span id="summon-btn-text">十連抽</span>
+                    </button>
+                    <button onclick="openShop()" class="btn-secondary text-white font-bold py-3 px-6 rounded-full text-lg flex items-center gap-2">
+                        <i data-lucide="shopping-bag"></i> 兌換商店
+                    </button>
+                </div>
+
+                <div id="card-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 w-full max-w-6xl z-10 pb-10 px-4">
+                    <div class="text-slate-500 col-span-full text-center py-20 bg-slate-800/30 rounded-lg border border-slate-700/50">
+                        <i data-lucide="clock" class="mx-auto mb-2 opacity-50 animate-pulse"></i>
+                        正在連線至伺服器...
+                    </div>
+                </div>
+            </div>
+
+            <div id="view-announcements" class="slide-page">
+                <div class="w-full max-w-3xl px-4 mt-4">
+                    <div class="flex items-center justify-center gap-2 mb-6 text-2xl font-bold text-blue-300 border-b border-slate-700/50 pb-3">
+                        <i data-lucide="bell-ring"></i>
+                        系統公告與狀態
+                    </div>
+
+                    <div id="bot-status-container" class="hidden mb-6 bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex items-center justify-between shadow-lg">
+                        <div class="flex items-center gap-4">
+                            <div class="relative flex h-4 w-4">
+                            <span id="status-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span id="status-indicator" class="relative inline-flex rounded-full h-4 w-4 bg-green-500"></span>
+                            </div>
+                            <div>
+                                <div id="bot-status-text" class="font-bold text-lg text-white">Bot 狀態載入中</div>
+                                <div id="bot-status-subtext" class="text-sm text-slate-400">連線中...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="announcements-list" class="space-y-4 pb-10">
+                        <div id="announcement-loading" class="text-center py-12 text-slate-500 bg-slate-800/30 rounded-lg border border-slate-700/50">
+                            <i data-lucide="loader-2" class="mx-auto mb-2 animate-spin"></i>
+                            載入資料中...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <nav class="bottom-nav">
+        <div onclick="switchTab('gacha')" id="tab-gacha" class="nav-item active">
+            <i data-lucide="layout-grid"></i>
+            <span class="text-xs font-bold">抽卡</span>
+        </div>
+        <div onclick="switchTab('announcements')" id="tab-announcements" class="nav-item">
+            <i data-lucide="bell"></i>
+            <span class="text-xs font-bold">公告</span>
+        </div>
+    </nav>
+
+    <div id="shop-modal" class="modal-overlay">
+        <div class="modal-content relative">
+            <button onclick="closeShop()" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+                <i data-lucide="x"></i>
+            </button>
+            <h2 class="text-2xl font-bold mb-1 flex items-center gap-2">
+                <i data-lucide="store" class="text-yellow-400"></i> 兌換商店
+            </h2>
+            <p class="text-slate-400 text-sm mb-6">消耗閃卡兌換 VIP </p>
+
+            <div class="space-y-4">
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 flex items-center justify-between group hover:border-blue-500 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center text-white shadow-lg"><i data-lucide="shield"></i></div>
+                        <div><div class="font-bold">標準 VIP</div><div class="text-xs text-slate-400">有效期 1 天</div></div>
+                    </div>
+                    <button onclick="purchaseVIP('standard', this)" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded-lg font-bold text-sm flex items-center gap-1 transition-colors disabled:opacity-50">100 <i data-lucide="sparkles" size="12"></i></button>
+                </div>
+                <div class="bg-slate-800/50 p-4 rounded-xl border border-slate-700 flex items-center justify-between group hover:border-yellow-500 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center text-white shadow-lg"><i data-lucide="crown"></i></div>
+                        <div><div class="font-bold text-yellow-100">高級 VIP</div><div class="text-xs text-slate-400">有效期 1 天</div></div>
+                    </div>
+                    <button onclick="purchaseVIP('premium', this)" class="px-4 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg font-bold text-sm flex items-center gap-1 transition-colors disabled:opacity-50">500 <i data-lucide="sparkles" size="12"></i></button>
+                </div>
+            </div>
+            <div class="mt-6 pt-4 border-t border-slate-700 text-center text-xs text-slate-500">注意：不同等級的VIP剩餘日數不可叠加，一旦更改VIP等級，VIP剩餘日數會重新計算。</div>
+        </div>
+    </div>
+
+    <canvas id="particles"></canvas>
+
+    <script>
+        // --- 設定網域 ---
+        const API_URL_GACHA = "https://api.atlrunner.dpdns.org"; 
+        const API_URL_ANNOUNCE = "https://atlrunner.dpdns.org";
+
+        // 初始化 Icons
+        lucide.createIcons();
+        const COOLDOWN_TIME = 24 * 60 * 60 * 1000;
+        
+        let gameState = { totalFlashCards: 0, vipState: { level: 'none', expiry: 0 }, lastDrawTime: 0 };
+        const raritiesConfig = {
+            'common': { name: '一般', colorClass: 'rarity-common', iconColor: '#374151', icon: 'ticket' },
+            'advanced': { name: '高級', colorClass: 'rarity-advanced', iconColor: '#1e40af', icon: 'copy' },
+            'rare': { name: '稀有', colorClass: 'rarity-rare', iconColor: '#6b21a8', icon: 'layers' },
+            'legendary': { name: '傳說', colorClass: 'rarity-legendary', iconColor: '#854d0e', icon: 'crown' }
+        };
+
+        // UI 左右滑動切換邏輯
+        function switchTab(tabName) {
+            // 1. 更新底部選單按鈕的狀態
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+
+            // 2. 更新 Slider 位置與透明度狀態
+            const slider = document.getElementById('slider-container');
+            document.querySelectorAll('.slide-page').forEach(el => el.classList.remove('active'));
+            document.getElementById(`view-${tabName}`).classList.add('active');
+
+            if (tabName === 'gacha') {
+                slider.style.transform = 'translateX(0%)';
+            } else if (tabName === 'announcements') {
+                slider.style.transform = 'translateX(-50%)'; // 向左平移 50% 的容器寬度 (即第二頁)
+                
+                // 首次切換到公告時自動載入資料
+                if (!window.announcementsLoaded) {
+                    loadAnnouncements();
+                    window.announcementsLoaded = true;
+                }
             }
 
-            const data = await response.json();
-            renderPage(data);
+            // 避免長頁面切換到短頁面時出現留白，每次切換都平滑回頂部
+            window.scrollTo({ top: 0, behavior: 'smooth' });
 
-        } catch (error) {
-            console.error('Error loading data:', error);
-            document.getElementById('loading').innerText = "無法連線至狀態伺服器，請檢查網路。";
-        }
-    }
-
-    function renderPage(data) {
-        const statusCard = document.getElementById('status-card');
-        const statusIndicator = document.getElementById('status-indicator');
-        const statusText = document.getElementById('status-text');
-        const statusSubtext = document.getElementById('status-subtext');
-
-        if (data.botStatus) {
-            statusText.innerText = data.botStatus.text;
-            statusSubtext.innerText = data.botStatus.subText;
-            statusIndicator.style.backgroundColor = data.botStatus.color || '#2ecc71';
-            statusCard.style.display = 'block';
+            // 震動回饋
+            if (window.Telegram?.WebApp?.HapticFeedback) {
+                window.Telegram.WebApp.HapticFeedback.selectionChanged();
+            }
         }
 
-        const announcementsContainer = document.getElementById('announcements');
-        const loadingDiv = document.getElementById('loading');
-        
-        announcementsContainer.innerHTML = '';
-        loadingDiv.style.display = 'none';
-
-        if (data.announcements && data.announcements.length > 0) {
-            data.announcements.forEach(item => {
-                const contentHtml = item.content.replace(/\n/g, '<br>');
-
-                const div = document.createElement('div');
-                div.className = 'announcement';
-                div.innerHTML = `
-                    <div class="date">${item.date}</div>
-                    <span class="title">${item.title}</span>
-                    <div style="line-height: 1.5;">${contentHtml}</div>
-                `;
-                announcementsContainer.appendChild(div);
-            });
-        } else {
-            announcementsContainer.innerHTML = '<div style="text-align:center; color: #888; padding: 20px;">目前沒有公告</div>';
+        // Telegram Auth
+        function getAuthHeaders() {
+            const tg = window.Telegram?.WebApp;
+            return { "Content-Type": "application/json", "Authorization": (tg && tg.initData) ? `tma ${tg.initData}` : "" };
         }
-    }
 
-    loadData();
+        function initTelegramUser() {
+            const tg = window.Telegram?.WebApp;
+            if (tg) {
+                tg.ready();
+                try { tg.expand(); } catch(e) {}
+                const user = tg.initDataUnsafe?.user;
+                if (user) {
+                    document.getElementById('tg-username').textContent = user.username ? `@${user.username}` : user.first_name;
+                    document.getElementById('tg-userid').textContent = `ID: ${user.id}`;
+                } else {
+                    document.getElementById('tg-username').textContent = "冒險者 (Web)";
+                    document.getElementById('tg-userid').textContent = "非 TG 環境";
+                }
+            }
+        }
 
-</script>
+        /* ----- 核心系統: 抽卡 API ----- */
+        async function loadGame() {
+            try {
+                const res = await fetch(`${API_URL_GACHA}/api/user`, { headers: getAuthHeaders() });
+                if (!res.ok) throw new Error("無法連接至伺服器");
+                const data = await res.json();
+                
+                gameState.totalFlashCards = data.balance;
+                gameState.lastDrawTime = data.last_draw_time;
+                if (data.vip) {
+                    gameState.vipState.level = data.vip.level === 0 ? 'premium' : 'standard';
+                    gameState.vipState.expiry = new Date(data.vip.vip_expiry_date).getTime();
+                } else {
+                    gameState.vipState.level = 'none';
+                    gameState.vipState.expiry = 0;
+                }
+                
+                updateStatsUI(); checkCooldown();
 
+                const grid = document.getElementById('card-grid');
+                grid.innerHTML = `<div class="text-slate-500 col-span-full text-center py-20 bg-slate-800/30 rounded-lg border border-slate-700/50"><i data-lucide="sparkles" class="mx-auto mb-2 opacity-50"></i>每天登入，測試你的運氣</div>`;
+                lucide.createIcons();
+            } catch (error) {
+                console.error("載入失敗:", error);
+                document.getElementById('card-grid').innerHTML = `<div class="text-red-400 col-span-full text-center py-20 bg-red-900/20 rounded-lg border border-red-700/50"><i data-lucide="alert-circle" class="mx-auto mb-2 opacity-80"></i>連線伺服器失敗。</div>`;
+                lucide.createIcons();
+            }
+        }
+
+        /* ----- 核心系統: 公告 API ----- */
+        async function loadAnnouncements() {
+            const listContainer = document.getElementById('announcements-list');
+            try {
+                const response = await fetch(`${API_URL_ANNOUNCE}/?t=${new Date().getTime()}`);
+                if (!response.ok) throw new Error('無法讀取資料');
+                const data = await response.json();
+                
+                // 渲染 Bot 狀態
+                if (data.botStatus) {
+                    const statusCard = document.getElementById('bot-status-container');
+                    document.getElementById('bot-status-text').innerText = data.botStatus.text;
+                    document.getElementById('bot-status-subtext').innerText = data.botStatus.subText || '';
+                    document.getElementById('status-indicator').style.backgroundColor = data.botStatus.color || '#22c55e';
+                    
+                    if(data.botStatus.color && data.botStatus.color !== '#22c55e' && data.botStatus.color !== '#2ecc71') {
+                         document.getElementById('status-ping').style.display = 'none'; // 非綠色狀態關閉呼吸燈
+                    }
+                    statusCard.style.display = 'flex';
+                }
+
+                // 渲染公告
+                listContainer.innerHTML = '';
+                if (data.announcements && data.announcements.length > 0) {
+                    data.announcements.forEach(item => {
+                        const contentHtml = item.content.replace(/\n/g, '<br>');
+                        listContainer.innerHTML += `
+                            <div class="announcement-card">
+                                <div class="text-xs text-blue-400 font-mono mb-1"><i data-lucide="calendar" class="inline w-3 h-3 mr-1"></i>${item.date}</div>
+                                <h3 class="text-lg font-bold text-white mb-2">${item.title}</h3>
+                                <div class="text-slate-300 text-sm leading-relaxed">${contentHtml}</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    listContainer.innerHTML = '<div class="text-center text-slate-500 py-10">目前沒有公告</div>';
+                }
+                lucide.createIcons();
+            } catch (error) {
+                console.error('Error loading announcements:', error);
+                listContainer.innerHTML = '<div class="text-center text-red-400 py-10"><i data-lucide="wifi-off" class="mx-auto mb-2 opacity-50"></i>無法連線至狀態伺服器</div>';
+                lucide.createIcons();
+            }
+        }
+
+        function checkCooldown() {
+            const btn = document.getElementById('summon-btn');
+            const btnText = document.getElementById('summon-btn-text');
+            const now = Date.now();
+            const timeSinceLastDraw = now - gameState.lastDrawTime;
+
+            if (timeSinceLastDraw < COOLDOWN_TIME) {
+                btn.disabled = true;
+                btn.classList.remove('bg-gradient-to-r', 'from-blue-600', 'to-indigo-700');
+                const rem = COOLDOWN_TIME - timeSinceLastDraw;
+                const h = Math.floor(rem / (1000 * 60 * 60)), m = Math.floor((rem % (1000 * 60 * 60)) / (1000 * 60)), s = Math.floor((rem % (1000 * 60)) / 1000);
+                btnText.innerText = `冷卻中 ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+            } else {
+                if (btn.disabled) {
+                    btn.disabled = false;
+                    btn.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-indigo-700');
+                    btnText.innerText = '十連抽';
+                    btn.classList.add('animate-bounce');
+                    setTimeout(() => btn.classList.remove('animate-bounce'), 1000);
+                }
+            }
+        }
+        setInterval(checkCooldown, 1000);
+
+        function updateStatsUI() {
+            const balanceEl = document.getElementById('balance-display');
+            if (parseInt(balanceEl.innerText) !== gameState.totalFlashCards) {
+                balanceEl.innerText = gameState.totalFlashCards;
+                balanceEl.classList.add('scale-125', 'text-yellow-400');
+                setTimeout(() => balanceEl.classList.remove('scale-125', 'text-yellow-400'), 200);
+            }
+
+            const now = Date.now();
+            const vipNameEl = document.getElementById('vip-name');
+            const vipIconContainer = document.getElementById('vip-icon');
+            document.body.classList.remove('vip-standard', 'vip-premium');
+            
+            if (gameState.vipState.expiry > now) {
+                const timeLeft = Math.ceil((gameState.vipState.expiry - now) / (1000 * 60 * 60 * 24));
+                if (gameState.vipState.level === 'premium') {
+                    vipNameEl.innerHTML = `<span class="text-yellow-400">高級VIP</span> 剩餘${timeLeft}天`;
+                    vipIconContainer.className = 'w-5 h-5 rounded-full flex items-center justify-center transition-all bg-yellow-600 shadow-[0_0_5px_rgba(234,179,8,0.5)]';
+                    vipIconContainer.innerHTML = `<i data-lucide="crown" size="12" class="text-white"></i>`;
+                    document.body.classList.add('vip-premium');
+                } else {
+                    vipNameEl.innerHTML = `<span class="text-slate-200">標準VIP</span> 剩餘${timeLeft}天`;
+                    vipIconContainer.className = 'w-5 h-5 rounded-full flex items-center justify-center transition-all bg-slate-500';
+                    vipIconContainer.innerHTML = `<i data-lucide="shield" size="12" class="text-white"></i>`;
+                    document.body.classList.add('vip-standard');
+                }
+            } else {
+                vipNameEl.innerText = '無 VIP';
+                vipIconContainer.className = 'w-5 h-5 rounded-full flex items-center justify-center transition-all bg-slate-700';
+                vipIconContainer.innerHTML = `<i data-lucide="user" size="12" class="text-slate-400"></i>`;
+            }
+            lucide.createIcons();
+        }
+
+        function createCardElement(index, rarityId, amount) {
+            const config = raritiesConfig[rarityId];
+            const scene = document.createElement('div');
+            scene.className = `scene opacity-0 translate-y-4 transition-all duration-500 ${config.colorClass}`;
+            scene.style.transitionDelay = `${index * 50}ms`;
+
+            const card = document.createElement('div');
+            card.className = 'card'; card.dataset.rewardClaimed = "false";
+
+            card.innerHTML = `
+                <div class="card-back card-face"><i data-lucide="sparkles" class="card-back-logo"></i></div>
+                <div class="card-front card-face">
+                    <div class="text-xs font-bold uppercase tracking-wider mb-2 opacity-70">${config.name}</div>
+                    <div class="flex-1 flex flex-col items-center justify-center">
+                        <i data-lucide="${config.icon}" style="color: ${config.iconColor}; width: 48px; height: 48px; margin-bottom: 8px;"></i>
+                        <div class="amount-text" style="color: ${config.iconColor}">${amount}</div>
+                    </div>
+                    <div class="font-bold text-lg leading-tight mt-1">張閃卡</div>
+                </div>`;
+            scene.appendChild(card);
+
+            let isFlipped = false;
+            const flipCard = () => {
+                if (isFlipped) return;
+                isFlipped = true; card.classList.add('is-flipped'); card.classList.remove('is-peeking');
+                if (card.dataset.rewardClaimed === "false") {
+                    gameState.totalFlashCards += amount;
+                    card.dataset.rewardClaimed = "true";
+                    updateStatsUI();
+                }
+                if (rarityId === 'legendary') createConfetti(scene);
+                setTimeout(() => card.querySelector('.card-front').classList.add('flash'), 150);
+            };
+
+            scene.addEventListener('click', flipCard);
+            scene.addEventListener('touchstart', (e) => { if (e.touches.length === 1) card.classList.add('is-peeking'); }, { passive: true });
+            scene.addEventListener('touchend', () => { card.classList.remove('is-peeking'); flipCard(); });
+            scene.addEventListener('touchcancel', () => card.classList.remove('is-peeking'));
+
+            return scene;
+        }
+
+        async function drawCards() {
+            const btn = document.getElementById('summon-btn');
+            if (Date.now() - gameState.lastDrawTime < COOLDOWN_TIME) {
+                if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+                return;
+            }
+
+            btn.disabled = true; document.getElementById('summon-btn-text').innerText = "召喚中...";
+
+            try {
+                const res = await fetch(`${API_URL_GACHA}/api/draw`, { method: "POST", headers: getAuthHeaders() });
+                if (!res.ok) throw new Error((await res.json()).detail || "伺服器錯誤");
+                const data = await res.json();
+                
+                if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+
+                gameState.lastDrawTime = Date.now(); checkCooldown();
+                gameState.totalFlashCards = data.new_balance - data.total_won; updateStatsUI();
+
+                const grid = document.getElementById('card-grid'); grid.innerHTML = '';
+                const amounts = { 'common': 1, 'advanced': 5, 'rare': 10, 'legendary': 100 };
+
+                data.results.forEach((rarityId, i) => {
+                    const cardEl = createCardElement(i, rarityId, amounts[rarityId]);
+                    grid.appendChild(cardEl);
+                    requestAnimationFrame(() => setTimeout(() => cardEl.classList.remove('opacity-0', 'translate-y-4'), 50));
+                });
+                lucide.createIcons();
+
+            } catch (error) {
+                alert(error.message); btn.disabled = false; checkCooldown();
+            }
+        }
+
+        function openShop() { document.getElementById('shop-modal').classList.add('active'); }
+        function closeShop() { document.getElementById('shop-modal').classList.remove('active'); }
+
+        async function purchaseVIP(type, btnElement) {
+            const orig = btnElement.innerHTML;
+            btnElement.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="16"></i> 處理中`;
+            btnElement.disabled = true;
+
+            try {
+                const res = await fetch(`${API_URL_GACHA}/api/buy_vip`, { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ type: type }) });
+                if (!res.ok) throw new Error((await res.json()).detail || "餘額不足或兌換失敗");
+
+                if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                btnElement.innerHTML = `<i data-lucide="check"></i> 成功`; btnElement.classList.add('bg-green-600');
+                
+                setTimeout(() => { btnElement.innerHTML = orig; btnElement.classList.remove('bg-green-600'); btnElement.disabled = false; lucide.createIcons(); }, 1500);
+                await loadGame();
+            } catch (error) {
+                if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+                if (window.Telegram?.WebApp) window.Telegram.WebApp.showAlert(error.message); else alert(error.message);
+                btnElement.innerHTML = orig; btnElement.disabled = false; btnElement.classList.add('animate-pulse', 'bg-red-600');
+                setTimeout(() => btnElement.classList.remove('animate-pulse', 'bg-red-600'), 500);
+                lucide.createIcons();
+            }
+        }
+
+        document.getElementById('shop-modal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeShop(); });
+
+        function createConfetti(element) {
+            const rect = element.getBoundingClientRect(), canvas = document.getElementById('particles'), ctx = canvas.getContext('2d');
+            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+            const particles = [], cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+            for (let i = 0; i < 50; i++) particles.push({ x: cx, y: cy, vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15, life: 1.2, color: `hsl(${40 + Math.random() * 20}, 100%, 50%)` });
+            function animate() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height); let active = false;
+                particles.forEach(p => {
+                    if (p.life > 0) {
+                        active = true; p.x += p.vx; p.y += p.vy; p.vy += 0.3; p.life -= 0.02;
+                        ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill();
+                    }
+                });
+                if (active) requestAnimationFrame(animate); else ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            animate();
+        }
+
+        setInterval(() => { if (gameState.vipState.expiry > 0 && Date.now() > gameState.vipState.expiry) updateStatsUI(); }, 60000);
+
+        // 啟動邏輯
+        initTelegramUser();
+        loadGame();
+
+    </script>
 </body>
 </html>
