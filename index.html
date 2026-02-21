@@ -27,7 +27,6 @@
             padding-bottom: calc(80px + var(--safe-area-inset-bottom)); 
         }
 
-        /* 頂部狀態列 */
         .stats-bar {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 70px;
@@ -44,7 +43,6 @@
         body.vip-standard .stats-bar { border-bottom: 1px solid #94a3b8; background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(51, 65, 85, 0.95)); }
         body.vip-premium .stats-bar { border-bottom: 1px solid #eab308; background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(88, 28, 135, 0.95)); }
 
-        /* 底部導航列 */
         .bottom-nav {
             position: fixed;
             bottom: 0; left: 0; width: 100%;
@@ -65,23 +63,22 @@
         .nav-item.active svg { stroke: #60a5fa; transform: translateY(-2px); }
         .nav-item svg { transition: transform 0.2s; }
 
-        /* 左右滑動視窗 (Slider) 核心 CSS */
         .slider-viewport {
             width: 100%;
-            overflow-x: hidden; /* 隱藏水平捲軸 */
+            overflow-x: hidden;
             position: relative;
         }
         .slider-container {
             display: flex;
-            width: 200%; /* 兩個分頁，所以總寬度是視窗的 2 倍 */
+            width: 200%;
             transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
             will-change: transform;
-            align-items: flex-start; /* 防止兩個頁面互相拉長到一樣高 */
+            align-items: flex-start;
         }
         .slide-page {
-            width: 50%; /* 每個頁面佔容器的 50% (等於視窗的 100%) */
+            width: 50%;
             flex-shrink: 0;
-            opacity: 0.5; /* 非作用中頁面稍微降低透明度，提升切換時的層次感 */
+            opacity: 0.5;
             transition: opacity 0.4s ease;
             pointer-events: none;
             display: flex;
@@ -93,7 +90,6 @@
             pointer-events: auto;
         }
 
-        /* 抽卡系統樣式 */
         .scene { perspective: 1000px; cursor: pointer; width: 100%; aspect-ratio: 2/3; }
         .card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1), box-shadow 0.3s ease; border-radius: 12px; }
         .card.is-flipped { transform: rotateY(180deg); }
@@ -130,13 +126,11 @@
         .amount-text { font-size: 2.5rem; font-weight: 900; line-height: 1; }
         .rarity-legendary .amount-text { text-shadow: 0 2px 4px rgba(0,0,0,0.2); font-size: 3rem; }
 
-        /* Modal */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; backdrop-filter: blur(5px); }
         .modal-overlay.active { opacity: 1; pointer-events: auto; }
         .modal-content { background: #1e293b; border: 1px solid #475569; border-radius: 16px; width: 90%; max-width: 400px; padding: 24px; transform: translateY(20px); transition: transform 0.3s ease; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
         .modal-overlay.active .modal-content { transform: translateY(0); }
 
-        /* 公告樣式強化 */
         .announcement-card {
             background: rgba(30, 41, 59, 0.7);
             border: 1px solid rgba(71, 85, 105, 0.5);
@@ -189,6 +183,45 @@
                     <button onclick="openShop()" class="btn-secondary text-white font-bold py-3 px-6 rounded-full text-lg flex items-center gap-2">
                         <i data-lucide="shopping-bag"></i> 兌換商店
                     </button>
+                </div>
+
+                <div class="w-full max-w-lg px-4 mb-6 z-10">
+                    <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 backdrop-blur-sm">
+                        <div class="flex items-center justify-center gap-2 text-sm font-bold text-slate-300 mb-4 pb-2 border-b border-slate-700/50">
+                            <i data-lucide="info" class="w-4 h-4"></i>
+                            <span>抽卡機率與獎勵說明</span>
+                        </div>
+                        <div class="flex flex-col gap-3">
+                            <div class="flex items-center justify-between p-3 rounded-lg border border-slate-500/30 bg-slate-700/20 shadow-inner">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-slate-300 font-bold text-lg">一般</span>
+                                    <span class="text-xs font-medium text-slate-400 bg-slate-800/80 px-2 py-1 rounded">機率 80%</span>
+                                </div>
+                                <span class="text-xl font-black text-slate-200">1 <span class="text-sm font-normal text-slate-400">張</span></span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 rounded-lg border border-blue-500/30 bg-blue-900/20 shadow-inner">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-blue-400 font-bold text-lg">高級</span>
+                                    <span class="text-xs font-medium text-blue-400 bg-blue-950/80 px-2 py-1 rounded">機率 15%</span>
+                                </div>
+                                <span class="text-xl font-black text-blue-300">5 <span class="text-sm font-normal text-blue-400/70">張</span></span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 rounded-lg border border-purple-500/30 bg-purple-900/20 shadow-inner">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-purple-400 font-bold text-lg">稀有</span>
+                                    <span class="text-xs font-medium text-purple-400 bg-purple-950/80 px-2 py-1 rounded">機率 4%</span>
+                                </div>
+                                <span class="text-xl font-black text-purple-300">10 <span class="text-sm font-normal text-purple-400/70">張</span></span>
+                            </div>
+                            <div class="flex items-center justify-between p-3 rounded-lg border border-yellow-500/40 bg-yellow-900/20 shadow-[inset_0_0_15px_rgba(234,179,8,0.15)] relative overflow-hidden">
+                                <div class="flex items-center gap-3 relative z-10">
+                                    <span class="text-yellow-400 font-bold text-lg drop-shadow-md">傳說</span>
+                                    <span class="text-xs font-medium text-yellow-400 bg-yellow-950/80 px-2 py-1 rounded border border-yellow-500/20">機率 1%</span>
+                                </div>
+                                <span class="text-xl font-black text-yellow-300 relative z-10 drop-shadow-md">100 <span class="text-sm font-normal text-yellow-400/70">張</span></span>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <div id="card-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 w-full max-w-6xl z-10 pb-10 px-4">
@@ -275,11 +308,9 @@
     <canvas id="particles"></canvas>
 
     <script>
-        // --- 設定網域 ---
         const API_URL_GACHA = "https://api.atlrunner.dpdns.org"; 
         const API_URL_ANNOUNCE = "https://atlrunner.dpdns.org";
 
-        // 初始化 Icons
         lucide.createIcons();
         const COOLDOWN_TIME = 24 * 60 * 60 * 1000;
         
@@ -291,13 +322,10 @@
             'legendary': { name: '傳說', colorClass: 'rarity-legendary', iconColor: '#854d0e', icon: 'crown' }
         };
 
-        // UI 左右滑動切換邏輯
         function switchTab(tabName) {
-            // 1. 更新底部選單按鈕的狀態
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.getElementById(`tab-${tabName}`).classList.add('active');
 
-            // 2. 更新 Slider 位置與透明度狀態
             const slider = document.getElementById('slider-container');
             document.querySelectorAll('.slide-page').forEach(el => el.classList.remove('active'));
             document.getElementById(`view-${tabName}`).classList.add('active');
@@ -305,25 +333,21 @@
             if (tabName === 'gacha') {
                 slider.style.transform = 'translateX(0%)';
             } else if (tabName === 'announcements') {
-                slider.style.transform = 'translateX(-50%)'; // 向左平移 50% 的容器寬度 (即第二頁)
+                slider.style.transform = 'translateX(-50%)';
                 
-                // 首次切換到公告時自動載入資料
                 if (!window.announcementsLoaded) {
                     loadAnnouncements();
                     window.announcementsLoaded = true;
                 }
             }
 
-            // 避免長頁面切換到短頁面時出現留白，每次切換都平滑回頂部
             window.scrollTo({ top: 0, behavior: 'smooth' });
 
-            // 震動回饋
             if (window.Telegram?.WebApp?.HapticFeedback) {
                 window.Telegram.WebApp.HapticFeedback.selectionChanged();
             }
         }
 
-        // Telegram Auth
         function getAuthHeaders() {
             const tg = window.Telegram?.WebApp;
             return { "Content-Type": "application/json", "Authorization": (tg && tg.initData) ? `tma ${tg.initData}` : "" };
@@ -345,7 +369,6 @@
             }
         }
 
-        /* ----- 核心系統: 抽卡 API ----- */
         async function loadGame() {
             try {
                 const res = await fetch(`${API_URL_GACHA}/api/user`, { headers: getAuthHeaders() });
@@ -374,7 +397,6 @@
             }
         }
 
-        /* ----- 核心系統: 公告 API ----- */
         async function loadAnnouncements() {
             const listContainer = document.getElementById('announcements-list');
             try {
@@ -382,7 +404,6 @@
                 if (!response.ok) throw new Error('無法讀取資料');
                 const data = await response.json();
                 
-                // 渲染 Bot 狀態
                 if (data.botStatus) {
                     const statusCard = document.getElementById('bot-status-container');
                     document.getElementById('bot-status-text').innerText = data.botStatus.text;
@@ -390,12 +411,11 @@
                     document.getElementById('status-indicator').style.backgroundColor = data.botStatus.color || '#22c55e';
                     
                     if(data.botStatus.color && data.botStatus.color !== '#22c55e' && data.botStatus.color !== '#2ecc71') {
-                         document.getElementById('status-ping').style.display = 'none'; // 非綠色狀態關閉呼吸燈
+                         document.getElementById('status-ping').style.display = 'none';
                     }
                     statusCard.style.display = 'flex';
                 }
 
-                // 渲染公告
                 listContainer.innerHTML = '';
                 if (data.announcements && data.announcements.length > 0) {
                     data.announcements.forEach(item => {
@@ -601,7 +621,6 @@
 
         setInterval(() => { if (gameState.vipState.expiry > 0 && Date.now() > gameState.vipState.expiry) updateStatsUI(); }, 60000);
 
-        // 啟動邏輯
         initTelegramUser();
         loadGame();
 
