@@ -186,8 +186,8 @@
                 </div>
 
                 <div class="w-full max-w-lg px-4 mb-6 z-10">
-                    <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 backdrop-blur-sm">
-                        <div class="flex items-center justify-center gap-2 text-sm font-bold text-slate-300 mb-4 pb-2 border-b border-slate-700/50">
+                    <button onclick="toggleInfo()" class="w-full bg-slate-800/40 border border-slate-700/50 rounded-xl p-3 flex items-center justify-between text-slate-300 hover:bg-slate-700/40 transition-colors backdrop-blur-sm shadow-sm">
+                        <div class="flex items-center gap-2 text-sm font-bold">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4">
                                 <circle cx="12" cy="12" r="10"></circle>
                                 <path d="M12 16v-4"></path>
@@ -195,7 +195,11 @@
                             </svg>
                             <span>抽卡機率與獎勵說明</span>
                         </div>
-                        <div class="flex flex-col gap-3">
+                        <i data-lucide="chevron-down" id="info-chevron" class="transition-transform duration-300 w-4 h-4 text-slate-400"></i>
+                    </button>
+                    
+                    <div id="info-content" class="overflow-hidden transition-all duration-300 max-h-0 opacity-0 mt-2">
+                        <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 backdrop-blur-sm flex flex-col gap-3">
                             <div class="flex items-center justify-between p-3 rounded-lg border border-slate-500/30 bg-slate-700/20 shadow-inner">
                                 <div class="flex items-center gap-3">
                                     <span class="text-slate-300 font-bold text-lg">一般</span>
@@ -349,6 +353,24 @@
 
             if (window.Telegram?.WebApp?.HapticFeedback) {
                 window.Telegram.WebApp.HapticFeedback.selectionChanged();
+            }
+        }
+
+        function toggleInfo() {
+            const content = document.getElementById('info-content');
+            const chevron = document.getElementById('info-chevron');
+            
+            if (content.classList.contains('max-h-0')) {
+                content.classList.remove('max-h-0', 'opacity-0');
+                content.classList.add('max-h-[500px]', 'opacity-100');
+                chevron.style.transform = 'rotate(180deg)';
+                if (window.Telegram?.WebApp?.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.selectionChanged();
+                }
+            } else {
+                content.classList.add('max-h-0', 'opacity-0');
+                content.classList.remove('max-h-[500px]', 'opacity-100');
+                chevron.style.transform = 'rotate(0deg)';
             }
         }
 
