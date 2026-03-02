@@ -244,8 +244,8 @@
             <div id="view-groups" class="slide-page">
                 <div class="w-full max-w-3xl px-4 mt-4">
                     <div class="flex items-center justify-center gap-2 mb-6 text-2xl font-bold text-yellow-400 border-b border-slate-700/50 pb-3">
-                        <i data-lucide="crown"></i>
-                        VIP 專屬群組
+                        <i data-lucide="link"></i>
+                        查看群組邀請連結
                     </div>
 
                     <div id="groups-content" class="pb-10 min-h-[50vh] flex flex-col items-center justify-center">
@@ -297,7 +297,7 @@
         </div>
         <div onclick="switchTab('groups')" id="tab-groups" class="nav-item">
             <i data-lucide="users"></i>
-            <span class="text-xs font-bold">群組</span>
+            <span class="text-xs font-bold">群組連結</span>
         </div>
         <div onclick="switchTab('announcements')" id="tab-announcements" class="nav-item">
             <i data-lucide="bell"></i>
@@ -422,25 +422,68 @@
                 const data = await res.json();
                 
                 if (data.data && data.data.length > 0) {
-                    container.innerHTML = '<div class="w-full space-y-4 flex flex-col items-stretch" id="groups-list"></div>';
-                    const list = document.getElementById('groups-list');
-                    
+                    // 將資料依據 category 進行分組
+                    const groupsByCategory = {};
                     data.data.forEach(group => {
                         if (!group.is_active) return;
-                        list.innerHTML += `
-                            <div class="bg-slate-800/60 border border-yellow-500/30 rounded-xl p-4 flex items-center justify-between hover:border-yellow-500/60 transition-colors shadow-lg shadow-yellow-900/10">
-                                <div>
-                                    <div class="text-xs text-yellow-500 font-bold mb-1 uppercase tracking-wider flex items-center gap-1">
-                                        <i data-lucide="tag" class="w-3 h-3"></i> ${group.category || '未分類'}
+                        const cat = group.category || '未分類';
+                        if (!groupsByCategory[cat]) groupsByCategory[cat] = [];
+                        groupsByCategory[cat].push(group);
+                    });
+                    
+                    // 處理最後更新時間
+                    const lastUpdated = data.meta?.last_updated ? new Date(data.meta.last_updated).toLocaleString('zh-TW', { hour12: false }) : new Date().toLocaleString('zh-TW');
+                    
+                    let html = `<div class="text-xs text-slate-400 text-center mb-4"><i data-lucide="clock" class="inline w-3 h-3 mr-1"></i>最後更新時間: ${lastUpdated}</div>`;
+                    html += `<div class="w-full space-y-3 flex flex-col items-stretch">`;
+                    
+                    // 渲染折疊式選單
+                    Object.keys(groupsByCategory).forEach(cat => {
+                        const items = groupsByCategory[cat];
+                        html += `
+                            <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl overflow-hidden shadow-sm">
+                                <button onclick="toggleCategory(this)" class="w-full p-4 flex items-center justify-between text-slate-200 hover:bg-slate-700/60 transition-colors">
+                                    <div class="flex items-center gap-2 font-bold text-lg">
+                                        <i data-lucide="folder-open" class="w-5 h-5 text-yellow-500"></i> ${cat} 
+                                        <span class="text-[10px] bg-slate-700/80 text-slate-300 px-2 py-0.5 rounded-full font-mono">${items.length}</span>
                                     </div>
-                                    <h3 class="text-lg font-bold text-slate-100">${group.name}</h3>
-                                </div>
-                                <button onclick="joinGroup('${group.invite_link}')" class="bg-yellow-500 hover:bg-yellow-400 text-yellow-950 font-bold px-4 py-2 rounded-lg text-sm flex items-center gap-1 transition-colors">
-                                    加入 <i data-lucide="external-link" class="w-4 h-4"></i>
+                                    <i data-lucide="chevron-down" class="transition-transform duration-300 w-5 h-5 text-slate-400 chevron-icon"></i>
                                 </button>
+                                <div class="max-h-0 opacity-0 overflow-hidden transition-all duration-300 bg-slate-800/30 category-content">
+                                    <div class="p-3 space-y-2 border-t border-slate-700/50">
+                        `;
+                        
+                        items.forEach(group => {
+                            html += `
+                                        <div class="bg-slate-800/80 border border-yellow-500/20 rounded-lg p-3 flex items-center justify-between hover:border-yellow-500/50 transition-colors">
+                                            <h3 class="text-md font-bold text-slate-200 truncate pr-2 flex items-center gap-2">
+                                                <i data-lucide="message-circle" class="w-4 h-4 text-slate-400"></i>
+                                                ${group.name}
+                                            </h3>
+                                            <button onclick="joinGroup('${group.invite_link}')" class="bg-yellow-500 hover:bg-yellow-400 text-yellow-950 font-bold px-3 py-1.5 rounded-md text-sm flex-shrink-0 flex items-center gap-1 transition-colors">
+                                                加入 <i data-lucide="external-link" class="w-3 h-3"></i>
+                                            </button>
+                                        </div>
+                            `;
+                        });
+                        
+                        html += `
+                                    </div>
+                                </div>
                             </div>
                         `;
                     });
+                    
+                    html += `</div>`;
+                    
+                    // 底部免責聲明與提醒
+                    html += `
+                        <div class="mt-6 p-4 rounded-xl bg-blue-900/20 border border-blue-800/50 text-xs text-blue-300/80 text-center leading-relaxed shadow-inner">
+                            <i data-lucide="info" class="inline w-4 h-4 mr-1 mb-1"></i>管理員會定期更新群組連結。<br>如發現部分群組連結失效，請與客服聯絡。
+                        </div>
+                    `;
+                    
+                    container.innerHTML = html;
                 } else {
                     container.innerHTML = '<div class="text-slate-500 text-center">目前沒有可用的群組連結</div>';
                 }
@@ -449,6 +492,27 @@
                 container.innerHTML = `<div class="text-red-400 text-center bg-red-900/20 border border-red-700/50 p-4 rounded-xl max-w-sm w-full"><i data-lucide="alert-triangle" class="mx-auto mb-2 w-8 h-8 opacity-80"></i>${error.message}</div>`;
             }
             lucide.createIcons();
+        }
+
+        // 用於控制分類折疊選單的展開與收起
+        function toggleCategory(btn) {
+            const content = btn.nextElementSibling;
+            const chevron = btn.querySelector('.chevron-icon');
+            
+            if (content.classList.contains('max-h-0')) {
+                // 展開
+                content.classList.remove('max-h-0', 'opacity-0');
+                content.classList.add('max-h-[1500px]', 'opacity-100');
+                chevron.style.transform = 'rotate(180deg)';
+                if (window.Telegram?.WebApp?.HapticFeedback) {
+                    window.Telegram.WebApp.HapticFeedback.selectionChanged();
+                }
+            } else {
+                // 收起
+                content.classList.add('max-h-0', 'opacity-0');
+                content.classList.remove('max-h-[1500px]', 'opacity-100');
+                chevron.style.transform = 'rotate(0deg)';
+            }
         }
 
         function goToBotToUpgrade() {
