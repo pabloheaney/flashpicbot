@@ -70,13 +70,13 @@
         }
         .slider-container {
             display: flex;
-            width: 300%; /* 更新為 300% 以容納三個頁面 */
+            width: 300%;
             transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
             will-change: transform;
             align-items: flex-start;
         }
         .slide-page {
-            width: 33.3333%; /* 每個頁面佔 1/3 */
+            width: 33.3333%;
             flex-shrink: 0;
             opacity: 0.5;
             transition: opacity 0.4s ease;
@@ -240,6 +240,24 @@
                 </div>
             </div>
 
+            <!-- VIP 群組頁面 (調整至第二個位置，對應 -33.3333% 滑動) -->
+            <div id="view-groups" class="slide-page">
+                <div class="w-full max-w-3xl px-4 mt-4">
+                    <div class="flex items-center justify-center gap-2 mb-6 text-2xl font-bold text-yellow-400 border-b border-slate-700/50 pb-3">
+                        <i data-lucide="crown"></i>
+                        VIP 專屬群組
+                    </div>
+
+                    <div id="groups-content" class="pb-10 min-h-[50vh] flex flex-col items-center justify-center">
+                        <div class="text-slate-500 flex flex-col items-center gap-2">
+                            <i data-lucide="loader-2" class="animate-spin w-8 h-8"></i>
+                            載入中...
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 系統公告頁面 (調整至第三個位置，對應 -66.6666% 滑動) -->
             <div id="view-announcements" class="slide-page">
                 <div class="w-full max-w-3xl px-4 mt-4">
                     <div class="flex items-center justify-center gap-2 mb-6 text-2xl font-bold text-blue-300 border-b border-slate-700/50 pb-3">
@@ -264,23 +282,6 @@
                         <div id="announcement-loading" class="text-center py-12 text-slate-500 bg-slate-800/30 rounded-lg border border-slate-700/50">
                             <i data-lucide="loader-2" class="mx-auto mb-2 animate-spin"></i>
                             載入資料中...
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- 新增群組邀請頁面 -->
-            <div id="view-groups" class="slide-page">
-                <div class="w-full max-w-3xl px-4 mt-4">
-                    <div class="flex items-center justify-center gap-2 mb-6 text-2xl font-bold text-yellow-400 border-b border-slate-700/50 pb-3">
-                        <i data-lucide="crown"></i>
-                        VIP 專屬群組
-                    </div>
-
-                    <div id="groups-content" class="pb-10 min-h-[50vh] flex flex-col items-center justify-center">
-                        <div class="text-slate-500 flex flex-col items-center gap-2">
-                            <i data-lucide="loader-2" class="animate-spin w-8 h-8"></i>
-                            載入中...
                         </div>
                     </div>
                 </div>
