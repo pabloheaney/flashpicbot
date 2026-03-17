@@ -1144,9 +1144,10 @@
                     let content = `<div class="text-sm text-slate-200 mb-1">${msg.text}</div>`;
                     
                     if (msg.has_media) {
+                        // [更新] 按鈕文字與圖標改為「傳送至收藏」
                         content += `
                             <button onclick="downloadUbMedia('${chatId}', '${msg.id}', this)" class="mt-2 text-xs bg-purple-600 hover:bg-purple-500 text-white py-1.5 px-3 rounded flex items-center gap-1 transition-colors">
-                                <i data-lucide="download-cloud" size="14"></i> 提取媒體
+                                <i data-lucide="send" size="14"></i> 傳送至收藏
                             </button>
                         `;
                     }
@@ -1172,26 +1173,29 @@
             document.getElementById('ub-chat-list').classList.remove('hidden');
         }
 
+        // [更新] 改為呼叫 POST 請求並提示使用者至 Saved Messages 查看
         async function downloadUbMedia(chatId, messageId, btn) {
             const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="loader-2" size="14" class="animate-spin"></i> 下載中...';
+            btn.innerHTML = '<i data-lucide="loader-2" size="14" class="animate-spin"></i> 處理中...';
             btn.disabled = true;
             lucide.createIcons();
 
             try {
-                const downloadUrl = `${API_URL_USERBOT}/api/download/${chatId}/${messageId}?session_token=${ubState.sessionToken}`;
-                const a = document.createElement('a');
-                a.href = downloadUrl;
-                a.download = ''; 
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
+                const res = await fetch(`${API_URL_USERBOT}/api/forward_media/${chatId}/${messageId}?session_token=${ubState.sessionToken}`, {
+                    method: 'POST'
+                });
+                const data = await res.json();
+                
+                if (!res.ok) throw new Error(data.detail || "傳送失敗");
                 
                 if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-                btn.innerHTML = '<i data-lucide="check" size="14"></i> 成功';
+                btn.innerHTML = '<i data-lucide="check" size="14"></i> 已存入收藏';
                 btn.classList.add('bg-green-600', 'border-transparent');
+                
+                // 顯示自訂提示框
+                showToast("✅ 已成功發送！請前往 Telegram 的「收藏的訊息」長按儲存。", false);
             } catch (err) {
-                showToast("下載失敗", true);
+                showToast(err.message, true);
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
             }
