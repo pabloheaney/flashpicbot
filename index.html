@@ -253,7 +253,7 @@
                 <div class="w-full max-w-3xl px-4 mt-4 relative min-h-[70vh]">
                     <div class="flex items-center justify-center gap-2 mb-4 text-2xl font-bold text-purple-400 border-b border-slate-700/50 pb-3">
                         <i data-lucide="smartphone"></i>
-                        儲存包括閲後即焚的私人對話閃圖
+                        私密對話提取 (15分鐘限時)
                     </div>
 
                     <!-- 狀態 1: 非高級 VIP 阻擋畫面 -->
@@ -263,8 +263,8 @@
                                 <i data-lucide="crown" class="w-8 h-8 text-purple-400"></i>
                             </div>
                             <h3 class="text-xl font-bold text-white mb-2">高級 VIP 專屬功能</h3>
-                            <p class="text-slate-400 text-sm mb-6">透過安全通道登入個人 TG，儲存私人對話中的閃圖與影片，包括閲後即焚的閃圖，自動發送至個人收藏信息Saved Messages中（PM閃CAP圖功能）</p>
-                            <button onclick="goToBotToUpgrade()" class="w-full btn-glow bg-gradient-to-r from-purple-600 to-purple-500 text-white font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2">
+                            <p class="text-slate-400 text-sm mb-6">透過安全通道登入個人 TG，提取對話中的閃圖與影片。每次登入僅存活 15 分鐘，絕不留存紀錄。</p>
+                            <button onclick="openShop()" class="w-full btn-glow bg-gradient-to-r from-purple-600 to-purple-500 text-white font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2">
                                 升級高級 VIP 解鎖
                             </button>
                         </div>
@@ -273,8 +273,8 @@
                     <!-- 狀態 2: 登入表單 -->
                     <div id="ub-login-section" class="hidden flex-col gap-4">
                         <div class="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
-                            <label class="text-sm text-slate-400 mb-2 block">請先登入至 Telegram (需要輸入國際電話號碼，例如香港輸入+85212345678)</label>
-                            <input type="text" id="ub-phone" placeholder="+85212345678" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-purple-500 focus:outline-none mb-4 transition-colors">
+                            <label class="text-sm text-slate-400 mb-2 block">請輸入 Telegram 綁定的電話號碼 (含國碼)</label>
+                            <input type="text" id="ub-phone" placeholder="+886912345678 或 +85212345678" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-purple-500 focus:outline-none mb-4 transition-colors">
                             <button id="ub-btn-sendcode" onclick="ubSendCode()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
                                 <i data-lucide="send" size="18"></i> 獲取驗證碼
                             </button>
@@ -379,7 +379,7 @@
         </div>
         <div onclick="switchTab('userbot')" id="tab-userbot" class="nav-item">
             <i data-lucide="smartphone"></i>
-            <span class="text-xs font-bold">PM閃CAP圖</span>
+            <span class="text-xs font-bold">代登入</span>
         </div>
         <div onclick="switchTab('groups')" id="tab-groups" class="nav-item">
             <i data-lucide="users"></i>
@@ -939,6 +939,7 @@
         // --- Userbot 擴充邏輯 ---
         let ubState = {
             sessionToken: localStorage.getItem('ub_token') || null,
+            pendingSessionToken: null, // [重點修復] 新增：用於暫存等待驗證碼的 Token
             phoneHash: null,
             timerInterval: null,
             expiryTime: parseInt(localStorage.getItem('ub_expiry')) || 0
@@ -946,32 +947,44 @@
 
         function clearUbSession() {
             ubState.sessionToken = null;
+            ubState.pendingSessionToken = null;
+            ubState.phoneHash = null;
             ubState.expiryTime = 0;
             localStorage.removeItem('ub_token');
             localStorage.removeItem('ub_expiry');
             if (ubState.timerInterval) clearInterval(ubState.timerInterval);
             ubState.timerInterval = null;
+            
+            // 確保清空時，將登入表單的驗證碼與密碼區塊隱藏，恢復初始狀態
+            const codeSec = document.getElementById('ub-code-section');
+            if(codeSec) codeSec.classList.add('hidden');
+            const pwdSec = document.getElementById('ub-password-container');
+            if(pwdSec) pwdSec.classList.add('hidden');
         }
 
         function initUserbotView() {
             const isPremium = gameState.vipState.level === 'premium' && gameState.vipState.expiry > Date.now();
             
-            // 檢查 LocalStorage 的 Session 是否已過期
+            // 檢查 LocalStorage 的 正式 Session 是否已過期
             if (ubState.sessionToken && Date.now() > ubState.expiryTime) {
                 clearUbSession();
             }
 
             document.getElementById('ub-unauthorized').classList.toggle('hidden', isPremium);
+            
+            // 只有當沒有「正式 sessionToken」時，才顯示登入區塊 (暫存狀態依然顯示)
             document.getElementById('ub-login-section').classList.toggle('hidden', !isPremium || ubState.sessionToken !== null);
             document.getElementById('ub-active-session').classList.toggle('hidden', ubState.sessionToken === null);
             
-            // 如果有尚未過期的 Token，自動恢復畫面並倒數
+            // 如果有尚未過期的正式 Token，自動恢復畫面並倒數
             if (ubState.sessionToken !== null && isPremium) {
                 document.getElementById('ub-active-session').classList.add('flex');
                 if (!ubState.timerInterval) {
                     startUbTimer();
                     loadUbChats();
                 }
+            } else {
+                document.getElementById('ub-active-session').classList.remove('flex');
             }
             
             lucide.createIcons();
@@ -994,7 +1007,8 @@
                 const data = await res.json();
                 if (!res.ok) throw new Error(data.detail || "發送失敗");
 
-                ubState.sessionToken = data.session_token;
+                // [重點修復] 將取回的 token 存入暫存變數，而不是正式的 sessionToken
+                ubState.pendingSessionToken = data.session_token;
                 ubState.phoneHash = data.phone_code_hash;
                 
                 document.getElementById('ub-code-section').classList.remove('hidden');
@@ -1013,7 +1027,10 @@
             
             if(!code) return showToast("請輸入驗證碼", true);
             
-            // [重點修復] 前端防呆：如果密碼框已經顯示，就不允許密碼為空
+            // [重點修復] 防呆：如果沒有暫存的 Token，要求重新獲取
+            if (!ubState.pendingSessionToken) return showToast("請先獲取驗證碼", true);
+            
+            // 前端防呆：如果密碼框已經顯示，就不允許密碼為空
             if (!passwordContainer.classList.contains('hidden') && !password) {
                 return showToast("此帳號已開啟兩步驟驗證，請輸入密碼", true);
             }
@@ -1023,7 +1040,8 @@
             lucide.createIcons();
 
             try {
-                const res = await fetch(`${API_URL_USERBOT}/auth/login?session_token=${ubState.sessionToken}`, {
+                // [重點修復] 登入請求使用 pendingSessionToken
+                const res = await fetch(`${API_URL_USERBOT}/auth/login?session_token=${ubState.pendingSessionToken}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -1041,14 +1059,18 @@
                 }
 
                 if (!res.ok) {
-                    // [重點修復] 密碼錯誤時自動清空密碼框
+                    // 密碼錯誤時自動清空密碼框
                     if (data.detail && data.detail.includes("密碼錯誤")) {
                         document.getElementById('ub-password').value = "";
                     }
                     throw new Error(data.detail || "登入失敗");
                 }
 
-                // 登入成功，開啟 15 分鐘計時器並安全存入 LocalStorage
+                // [重點修復] 登入成功，將 pending 轉正為正式 sessionToken，並清空暫存
+                ubState.sessionToken = ubState.pendingSessionToken;
+                ubState.pendingSessionToken = null;
+
+                // 開啟 15 分鐘計時器並安全存入 LocalStorage
                 ubState.expiryTime = Date.now() + (15 * 60 * 1000);
                 if (typeof localStorage !== 'undefined') {
                     localStorage.setItem('ub_token', ubState.sessionToken);
