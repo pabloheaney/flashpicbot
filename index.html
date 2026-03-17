@@ -939,8 +939,9 @@
         // --- Userbot 擴充邏輯 ---
         let ubState = {
             sessionToken: localStorage.getItem('ub_token') || null,
-            pendingSessionToken: null, // [重點修復] 新增：用於暫存等待驗證碼的 Token
-            phoneHash: null,
+            pendingSessionToken: localStorage.getItem('ub_pending_token') || null, // [修改] 改為從 LocalStorage 讀取
+            phoneHash: localStorage.getItem('ub_phone_hash') || null, // [修改] 改為從 LocalStorage 讀取
+            phone: localStorage.getItem('ub_phone') || '', // [新增] 記住用戶輸入的手機號碼
             timerInterval: null,
             expiryTime: parseInt(localStorage.getItem('ub_expiry')) || 0
         };
@@ -949,9 +950,13 @@
             ubState.sessionToken = null;
             ubState.pendingSessionToken = null;
             ubState.phoneHash = null;
+            ubState.phone = '';
             ubState.expiryTime = 0;
             localStorage.removeItem('ub_token');
             localStorage.removeItem('ub_expiry');
+            localStorage.removeItem('ub_pending_token'); // [新增] 清除暫存
+            localStorage.removeItem('ub_phone_hash');    // [新增] 清除暫存
+            localStorage.removeItem('ub_phone');         // [新增] 清除暫存
             if (ubState.timerInterval) clearInterval(ubState.timerInterval);
             ubState.timerInterval = null;
             
@@ -960,6 +965,8 @@
             if(codeSec) codeSec.classList.add('hidden');
             const pwdSec = document.getElementById('ub-password-container');
             if(pwdSec) pwdSec.classList.add('hidden');
+            const phoneInput = document.getElementById('ub-phone');
+            if(phoneInput) phoneInput.value = '';
         }
 
         function initUserbotView() {
@@ -972,18 +979,34 @@
 
             document.getElementById('ub-unauthorized').classList.toggle('hidden', isPremium);
             
-            // 只有當沒有「正式 sessionToken」時，才顯示登入區塊 (暫存狀態依然顯示)
-            document.getElementById('ub-login-section').classList.toggle('hidden', !isPremium || ubState.sessionToken !== null);
-            document.getElementById('ub-active-session').classList.toggle('hidden', ubState.sessionToken === null);
-            
-            // 如果有尚未過期的正式 Token，自動恢復畫面並倒數
-            if (ubState.sessionToken !== null && isPremium) {
+            // [修改] 支援重開 APP 也能無縫恢復「等待驗證碼」畫面
+            if (!isPremium) {
+                document.getElementById('ub-login-section').classList.add('hidden');
+                document.getElementById('ub-active-session').classList.add('hidden');
+                document.getElementById('ub-active-session').classList.remove('flex');
+            } else if (ubState.sessionToken !== null) {
+                // 已正式登入的狀態
+                document.getElementById('ub-login-section').classList.add('hidden');
+                document.getElementById('ub-active-session').classList.remove('hidden');
                 document.getElementById('ub-active-session').classList.add('flex');
                 if (!ubState.timerInterval) {
                     startUbTimer();
                     loadUbChats();
                 }
+            } else if (ubState.pendingSessionToken !== null) {
+                // 等待輸入驗證碼的暫存狀態 (就算重開 APP 也會進入這裡)
+                document.getElementById('ub-login-section').classList.remove('hidden');
+                document.getElementById('ub-code-section').classList.remove('hidden');
+                document.getElementById('ub-active-session').classList.add('hidden');
+                document.getElementById('ub-active-session').classList.remove('flex');
+                if (ubState.phone) {
+                    document.getElementById('ub-phone').value = ubState.phone;
+                }
             } else {
+                // 最初始的未登入狀態
+                document.getElementById('ub-login-section').classList.remove('hidden');
+                document.getElementById('ub-code-section').classList.add('hidden');
+                document.getElementById('ub-active-session').classList.add('hidden');
                 document.getElementById('ub-active-session').classList.remove('flex');
             }
             
@@ -1010,6 +1033,12 @@
                 // [重點修復] 將取回的 token 存入暫存變數，而不是正式的 sessionToken
                 ubState.pendingSessionToken = data.session_token;
                 ubState.phoneHash = data.phone_code_hash;
+                ubState.phone = phone; // 紀錄手機號碼
+                
+                // [新增] 寫入 LocalStorage，防止用戶被迫關閉/重整 APP
+                localStorage.setItem('ub_pending_token', data.session_token);
+                localStorage.setItem('ub_phone_hash', data.phone_code_hash);
+                localStorage.setItem('ub_phone', phone);
                 
                 document.getElementById('ub-code-section').classList.remove('hidden');
                 btn.innerHTML = '<i data-lucide="check"></i> 已發送';
@@ -1063,6 +1092,13 @@
                     if (data.detail && data.detail.includes("密碼錯誤")) {
                         document.getElementById('ub-password').value = "";
                     }
+                    
+                    // [新增] 如果用戶拖太久，後端的 Pending Session 已經過期，前端主動清除並重置
+                    if (data.detail && (data.detail.includes("過期") || data.detail.includes("不存在"))) {
+                        clearUbSession();
+                        setTimeout(() => initUserbotView(), 1500); // 1.5秒後重置畫面讓用戶重新輸入
+                    }
+                    
                     throw new Error(data.detail || "登入失敗");
                 }
 
@@ -1075,6 +1111,10 @@
                 if (typeof localStorage !== 'undefined') {
                     localStorage.setItem('ub_token', ubState.sessionToken);
                     localStorage.setItem('ub_expiry', ubState.expiryTime);
+                    
+                    // [新增] 清除完成階段任務的暫存資料
+                    localStorage.removeItem('ub_pending_token');
+                    localStorage.removeItem('ub_phone_hash');
                 }
                 
                 startUbTimer();
@@ -1227,6 +1267,23 @@
 
         initTelegramUser();
         loadGame();
+
+        // [新增] 全域事件監聽：點擊空白處自動隱藏鍵盤，解決 Mini App 畫面卡死問題
+        document.addEventListener('touchstart', function(e) {
+            // 判斷點擊的目標是否為輸入框或按鈕
+            const isInput = e.target.tagName === 'INPUT' || 
+                            e.target.tagName === 'TEXTAREA' || 
+                            e.target.closest('button');
+            
+            // 如果點擊的是空白處 (非輸入元件)，且當前有被 Focus 的輸入框，則強制取消 Focus (收起鍵盤)
+            if (!isInput) {
+                if (document.activeElement && 
+                   (document.activeElement.tagName === 'INPUT' || 
+                    document.activeElement.tagName === 'TEXTAREA')) {
+                    document.activeElement.blur();
+                }
+            }
+        }, { passive: true });
 
     </script>
 </body>
