@@ -1008,11 +1008,12 @@
                 });
                 const data = await res.json();
                 
+                if (res.ok && data.status === "password_needed") {
+                    document.getElementById('ub-password-container').classList.remove('hidden');
+                    throw new Error("此帳號已開啟兩步驟驗證，請輸入密碼");
+                }
+
                 if (!res.ok) {
-                    if (data.detail && data.detail.includes("password")) {
-                        document.getElementById('ub-password-container').classList.remove('hidden');
-                        throw new Error("需要輸入兩步驟驗證密碼");
-                    }
                     throw new Error(data.detail || "登入失敗");
                 }
 
