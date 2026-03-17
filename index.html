@@ -253,7 +253,7 @@
                 <div class="w-full max-w-3xl px-4 mt-4 relative min-h-[70vh]">
                     <div class="flex items-center justify-center gap-2 mb-4 text-2xl font-bold text-purple-400 border-b border-slate-700/50 pb-3">
                         <i data-lucide="smartphone"></i>
-                        私密對話提取 (15分鐘限時)
+                        PM閃CAP圖功能，可在登入後15分鐘内從PM對話中CAP圖並儲存至收藏信息中
                     </div>
 
                     <!-- 狀態 1: 非高級 VIP 阻擋畫面 -->
@@ -263,7 +263,7 @@
                                 <i data-lucide="crown" class="w-8 h-8 text-purple-400"></i>
                             </div>
                             <h3 class="text-xl font-bold text-white mb-2">高級 VIP 專屬功能</h3>
-                            <p class="text-slate-400 text-sm mb-6">透過安全通道登入個人 TG，提取對話中的閃圖與影片。每次登入僅存活 15 分鐘，絕不留存紀錄。</p>
+                            <p class="text-slate-400 text-sm mb-6">透過安全通道登入個人 TG，提取個人對話中的閃圖與影片，包括閲後即焚的閃圖。（PM閃CAP圖功能）</p>
                             <button onclick="openShop()" class="w-full btn-glow bg-gradient-to-r from-purple-600 to-purple-500 text-white font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2">
                                 升級高級 VIP 解鎖
                             </button>
@@ -273,8 +273,8 @@
                     <!-- 狀態 2: 登入表單 -->
                     <div id="ub-login-section" class="hidden flex-col gap-4">
                         <div class="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
-                            <label class="text-sm text-slate-400 mb-2 block">請輸入 Telegram 綁定的電話號碼 (含國碼)</label>
-                            <input type="text" id="ub-phone" placeholder="+886912345678 或 +85212345678" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-purple-500 focus:outline-none mb-4 transition-colors">
+                            <label class="text-sm text-slate-400 mb-2 block">請先登入至 Telegram (需要輸入國際電話號碼，例如香港輸入+85212345678)</label>
+                            <input type="text" id="ub-phone" placeholder="必須輸入+852或該號碼所屬地區的國際碼，例如香港電話輸入+85212345678" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-purple-500 focus:outline-none mb-4 transition-colors">
                             <button id="ub-btn-sendcode" onclick="ubSendCode()" class="w-full bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors">
                                 <i data-lucide="send" size="18"></i> 獲取驗證碼
                             </button>
@@ -379,7 +379,7 @@
         </div>
         <div onclick="switchTab('userbot')" id="tab-userbot" class="nav-item">
             <i data-lucide="smartphone"></i>
-            <span class="text-xs font-bold">代登入</span>
+            <span class="text-xs font-bold">PM閃CAP圖</span>
         </div>
         <div onclick="switchTab('groups')" id="tab-groups" class="nav-item">
             <i data-lucide="users"></i>
