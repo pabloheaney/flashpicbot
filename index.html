@@ -938,20 +938,40 @@
 
         // --- Userbot 擴充邏輯 ---
         let ubState = {
-            sessionToken: null,
+            sessionToken: localStorage.getItem('ub_token') || null,
             phoneHash: null,
             timerInterval: null,
-            expiryTime: 0
+            expiryTime: parseInt(localStorage.getItem('ub_expiry')) || 0
         };
+
+        function clearUbSession() {
+            ubState.sessionToken = null;
+            ubState.expiryTime = 0;
+            localStorage.removeItem('ub_token');
+            localStorage.removeItem('ub_expiry');
+            if (ubState.timerInterval) clearInterval(ubState.timerInterval);
+            ubState.timerInterval = null;
+        }
 
         function initUserbotView() {
             const isPremium = gameState.vipState.level === 'premium' && gameState.vipState.expiry > Date.now();
             
+            // 檢查 LocalStorage 的 Session 是否已過期
+            if (ubState.sessionToken && Date.now() > ubState.expiryTime) {
+                clearUbSession();
+            }
+
             document.getElementById('ub-unauthorized').classList.toggle('hidden', isPremium);
             document.getElementById('ub-login-section').classList.toggle('hidden', !isPremium || ubState.sessionToken !== null);
             document.getElementById('ub-active-session').classList.toggle('hidden', ubState.sessionToken === null);
-            if (ubState.sessionToken !== null) {
+            
+            // 如果有尚未過期的 Token，自動恢復畫面並倒數
+            if (ubState.sessionToken !== null && isPremium) {
                 document.getElementById('ub-active-session').classList.add('flex');
+                if (!ubState.timerInterval) {
+                    startUbTimer();
+                    loadUbChats();
+                }
             }
             
             lucide.createIcons();
@@ -1028,8 +1048,11 @@
                     throw new Error(data.detail || "登入失敗");
                 }
 
-                // 登入成功，開啟 5 分鐘計時器
+                // 登入成功，開啟 5 分鐘計時器並安全存入 LocalStorage
                 ubState.expiryTime = Date.now() + (5 * 60 * 1000);
+                localStorage.setItem('ub_token', ubState.sessionToken);
+                localStorage.setItem('ub_expiry', ubState.expiryTime);
+                
                 startUbTimer();
                 
                 document.getElementById('ub-login-section').classList.add('hidden');
@@ -1056,7 +1079,7 @@
                 timerEl.innerText = `${m}:${s}`;
                 
                 if (remain <= 0) {
-                    clearInterval(ubState.timerInterval);
+                    clearUbSession();
                     showToast("Session 已過期，連線已中斷並清除資料。", true);
                     setTimeout(() => location.reload(), 2000); 
                 }
@@ -1070,6 +1093,12 @@
 
             try {
                 const res = await fetch(`${API_URL_USERBOT}/api/chats?session_token=${ubState.sessionToken}`);
+                // 如果後端發現 Session 過期或失效，前端主動清除紀錄並要求重登
+                if (res.status === 401 || res.status === 404) {
+                    clearUbSession();
+                    initUserbotView();
+                    throw new Error("連線已失效，請重新登入");
+                }
                 if (!res.ok) throw new Error("讀取失敗");
                 const data = await res.json();
 
