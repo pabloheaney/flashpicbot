@@ -1261,12 +1261,11 @@
 
         async function downloadUbMedia(chatId, messageId, btn) {
             const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="loader-2" size="14" class="animate-spin"></i> 處理中...';
+            btn.innerHTML = '<i data-lucide="loader-2" size="14" class="animate-spin"></i> 提取中...';
             btn.disabled = true;
             lucide.createIcons();
 
             try {
-                // [安全升級] 將 session_token 改由 Headers Authorization 傳遞
                 const res = await fetch(`${API_URL_USERBOT}/api/forward_media/${chatId}/${messageId}`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${ubState.sessionToken}` }
@@ -1275,11 +1274,17 @@
                 
                 if (!res.ok) throw new Error(data.detail || "傳送失敗");
                 
-                if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-                btn.innerHTML = '<i data-lucide="check" size="14"></i> 已存入收藏';
-                btn.classList.add('bg-green-600', 'border-transparent');
-                
-                showToast("✅ 已成功發送！請前往 Telegram 的「收藏的訊息」長按儲存。", false);
+                // 配合後端 BackgroundTasks 的狀態更新
+                if (data.status === "processing" || data.status === "success") {
+                    if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                    
+                    // 改變按鈕狀態為排程中
+                    btn.innerHTML = '<i data-lucide="clock" size="14"></i> 已排程處理';
+                    btn.classList.add('bg-blue-600', 'border-transparent');
+                    
+                    // 提示使用者任務在背景進行
+                    showToast("⏳ 已開始下載 請稍候前往 Telegram 的「收藏的訊息」查看。", false);
+                }
             } catch (err) {
                 showToast(err.message, true);
                 btn.innerHTML = originalHtml;
