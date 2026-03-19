@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
@@ -294,11 +294,21 @@
 
                     <!-- 狀態 3: 存活倒數與對話列表/視窗 -->
                     <div id="ub-active-session" class="hidden flex-col h-full pb-10">
-                        <div class="bg-red-900/30 border border-red-500/50 rounded-lg p-3 flex items-center justify-between mb-4">
-                            <div class="flex items-center gap-2 text-red-400 font-bold">
-                                <i data-lucide="timer" class="animate-pulse"></i> 自動登出倒數 剩餘
+                        <div class="bg-red-900/30 border border-red-500/50 rounded-lg p-3 flex flex-col mb-4">
+                            <div class="flex items-center justify-between mb-3">
+                                <div class="flex items-center gap-2 text-red-400 font-bold">
+                                    <i data-lucide="timer" class="animate-pulse"></i> 自動登出倒數
+                                </div>
+                                <div id="ub-timer" class="text-2xl font-mono font-black text-red-400">15:00</div>
                             </div>
-                            <div id="ub-timer" class="text-xl font-mono font-black text-red-400">15:00</div>
+                            <div class="flex gap-2 w-full">
+                                <button onclick="ubLogout()" class="flex-1 bg-red-600/80 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm border border-red-500">
+                                    <i data-lucide="log-out" size="16"></i> 安全登出
+                                </button>
+                                <button id="ub-btn-renew" onclick="ubRenewSession()" class="hidden flex-1 bg-blue-600/80 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg items-center justify-center gap-2 transition-colors text-sm border border-blue-500">
+                                    <i data-lucide="refresh-cw" size="16"></i> 繼續對話
+                                </button>
+                            </div>
                         </div>
 
                         <!-- 對話列表 -->
@@ -417,6 +427,24 @@
                 </div>
             </div>
             <div class="mt-6 pt-4 border-t border-slate-700 text-center text-xs text-slate-500">注意：不同等級的VIP剩餘日數不可叠加，一旦更改VIP等級，VIP剩餘日數會重新計算。</div>
+        </div>
+    </div>
+
+    <!-- 2 分鐘續約警告彈窗 -->
+    <div id="ub-warning-modal" class="modal-overlay">
+        <div class="modal-content relative bg-slate-900 border border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.3)]">
+            <h2 class="text-xl font-bold mb-3 flex items-center gap-2 text-red-400">
+                <i data-lucide="alert-triangle"></i> 連線即將中斷
+            </h2>
+            <p class="text-slate-300 text-sm mb-6 leading-relaxed">
+                為保護您的帳號安全，閃圖助手將在 <strong class="text-white bg-red-500/20 px-1 rounded">2分鐘</strong> 後自動登出。<br><br>如需繼續使用，請按「繼續」。
+            </p>
+            <div class="flex gap-3">
+                <button onclick="closeUbWarningModal()" class="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors">關閉</button>
+                <button onclick="ubRenewSession()" class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
+                    <i data-lucide="check" size="18"></i> 繼續
+                </button>
+            </div>
         </div>
     </div>
 
@@ -946,6 +974,7 @@
             timerInterval: null,
             expiryTime: parseInt(localStorage.getItem('ub_expiry')) || 0
         };
+        let ubWarningShown = false; // 控制彈窗不要一直跳
 
         function clearUbSession() {
             ubState.sessionToken = null;
@@ -953,6 +982,7 @@
             ubState.phoneHash = null;
             ubState.phone = '';
             ubState.expiryTime = 0;
+            ubWarningShown = false; // 清除時重置狀態
             localStorage.removeItem('ub_token');
             localStorage.removeItem('ub_expiry');
             localStorage.removeItem('ub_pending_token');
@@ -1152,6 +1182,14 @@
         function startUbTimer() {
             if (ubState.timerInterval) clearInterval(ubState.timerInterval);
             const timerEl = document.getElementById('ub-timer');
+            ubWarningShown = false;
+            
+            // 每次啟動計時器時，隱藏繼續對話按鈕
+            const renewBtn = document.getElementById('ub-btn-renew');
+            if(renewBtn) {
+                renewBtn.classList.add('hidden');
+                renewBtn.classList.remove('flex');
+            }
             
             ubState.timerInterval = setInterval(() => {
                 const remain = Math.max(0, Math.floor((ubState.expiryTime - Date.now()) / 1000));
@@ -1159,12 +1197,84 @@
                 const s = String(remain % 60).padStart(2, '0');
                 timerEl.innerText = `${m}:${s}`;
                 
+                // 剩餘 120 秒時，跳出 CSS 警告彈窗
+                if (remain <= 120 && remain > 0 && !ubWarningShown) {
+                    ubWarningShown = true;
+                    document.getElementById('ub-warning-modal').classList.add('active');
+                }
+                
                 if (remain <= 0) {
+                    document.getElementById('ub-warning-modal').classList.remove('active');
                     clearUbSession();
-                    showToast("Session 已過期，連線已中斷並清除資料。", true);
+                    showToast("Session 已過期，連線已自動安全登出。", true);
                     setTimeout(() => location.reload(), 2000); 
                 }
             }, 1000);
+        }
+
+        function closeUbWarningModal() {
+            document.getElementById('ub-warning-modal').classList.remove('active');
+            // 使用者點擊關閉後，將「繼續對話」按鈕顯示在「安全登出」旁邊
+            const renewBtn = document.getElementById('ub-btn-renew');
+            if(renewBtn) {
+                renewBtn.classList.remove('hidden');
+                renewBtn.classList.add('flex');
+            }
+        }
+
+        async function ubRenewSession() {
+            try {
+                // 呼叫後端 API 續約
+                const res = await fetch(`${API_URL_USERBOT}/auth/renew`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${ubState.sessionToken}` }
+                });
+                if (!res.ok) throw new Error("續約失敗，可能連線已過期");
+                
+                // 關閉彈窗
+                document.getElementById('ub-warning-modal').classList.remove('active');
+                
+                // 隱藏登出旁邊的繼續對話按鈕
+                const renewBtn = document.getElementById('ub-btn-renew');
+                if(renewBtn) {
+                    renewBtn.classList.add('hidden');
+                    renewBtn.classList.remove('flex');
+                }
+                
+                // 重置警告狀態並加時 15 分鐘
+                ubWarningShown = false;
+                ubState.expiryTime = Date.now() + (15 * 60 * 1000);
+                if (typeof localStorage !== 'undefined') {
+                    localStorage.setItem('ub_expiry', ubState.expiryTime);
+                }
+                
+                showToast("✅ 已成功延長連線時間 15 分鐘", false);
+                lucide.createIcons();
+            } catch(err) {
+                showToast(err.message, true);
+                clearUbSession();
+                initUserbotView();
+            }
+        }
+
+        async function ubLogout() {
+            // 提供原生的確認對話框，防止誤觸
+            if (!confirm("確定要安全登出嗎？這將會清除目前的 Telegram 連線紀錄。")) return;
+            
+            try {
+                // 呼叫後端主動登出 (徹底銷毀 Telegram Session)
+                await fetch(`${API_URL_USERBOT}/auth/logout`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${ubState.sessionToken}` }
+                });
+            } catch (err) {
+                console.log("登出 API 呼叫失敗，但仍會清理本地紀錄");
+            } finally {
+                // 無論後端是否成功，前端都強制清空登出
+                clearUbSession();
+                initUserbotView();
+                showToast("✅ 已成功安全登出", false);
+            }
         }
 
         async function loadUbChats() {
