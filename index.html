@@ -282,6 +282,12 @@
                         <div id="ub-code-section" class="bg-slate-800/50 p-5 rounded-xl border border-slate-700 hidden">
                             <label class="text-sm text-slate-400 mb-2 block">請輸入 Telegram 收到的驗證碼</label>
                             <input type="text" id="ub-code" placeholder="12345" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-purple-500 focus:outline-none mb-3">
+                            
+                            <!-- 新增：重新輸入電話按鈕 -->
+                            <div class="text-right mb-3">
+                                <button onclick="clearUbSession(); initUserbotView();" class="text-xs text-purple-400 hover:text-purple-300 transition-colors underline">輸入錯誤？重新輸入電話號碼</button>
+                            </div>
+
                             <div id="ub-password-container" class="hidden mb-3">
                                 <label class="text-sm text-slate-400 mb-2 block">兩步驟驗證密碼 (2FA)</label>
                                 <input type="password" id="ub-password" placeholder="請輸入密碼" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-purple-500 focus:outline-none">
@@ -1371,7 +1377,11 @@
 
         async function downloadUbMedia(chatId, messageId, btn) {
             const originalHtml = btn.innerHTML;
-            btn.innerHTML = '<i data-lucide="loader-2" size="14" class="animate-spin"></i> 提取中...';
+            const originalClasses = btn.className;
+            
+            // 立即改變按鈕外觀為處理中，防止重複點擊
+            btn.innerHTML = '<i data-lucide="loader-2" size="14" class="animate-spin"></i> 下載處理中...';
+            btn.className = "mt-2 text-xs bg-blue-600 text-white font-bold py-1.5 px-3 rounded flex items-center gap-1 transition-colors w-fit";
             btn.disabled = true;
             lucide.createIcons();
 
@@ -1384,22 +1394,83 @@
                 
                 if (!res.ok) throw new Error(data.detail || "傳送失敗");
                 
-                // 配合後端 BackgroundTasks 的狀態更新
-                if (data.status === "processing" || data.status === "success") {
-                    if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-                    
-                    // 改變按鈕狀態為排程中
-                    btn.innerHTML = '<i data-lucide="clock" size="14"></i> 已排程處理';
-                    btn.classList.add('bg-blue-600', 'border-transparent');
-                    
-                    // 提示使用者任務在背景進行
-                    showToast("⏳ 已開始下載 請稍候前往 Telegram 的「收藏的訊息」查看。", false);
-                }
+                // 開始輪詢 Task 狀態
+                pollTaskStatus(data.task_id, btn, originalHtml, originalClasses);
+
             } catch (err) {
                 showToast(err.message, true);
                 btn.innerHTML = originalHtml;
+                btn.className = originalClasses;
                 btn.disabled = false;
+                lucide.createIcons();
             }
+        }
+
+        // --- 核心優化：智慧型指數退避輪詢 (Exponential Backoff Polling) ---
+        function pollTaskStatus(taskId, btn, originalHtml, originalClasses) {
+            let attempts = 0;
+            let delay = 2000; // 初始間隔 2 秒
+
+            const checkStatus = async () => {
+                try {
+                    const res = await fetch(`${API_URL_USERBOT}/api/task_status/${taskId}`, {
+                        headers: { 'Authorization': `Bearer ${ubState.sessionToken}` }
+                    });
+                    if (!res.ok) throw new Error("查詢狀態失敗");
+                    
+                    const data = await res.json();
+                    
+                    if (data.status === "success") {
+                        if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+                        
+                        btn.innerHTML = '<i data-lucide="check" size="14"></i> 已發送至收藏';
+                        btn.className = "mt-2 text-xs bg-green-600 text-white font-bold py-1.5 px-3 rounded flex items-center gap-1 transition-colors w-fit shadow-[0_0_10px_rgba(34,197,94,0.3)]";
+                        lucide.createIcons();
+                        return; // 終止輪詢
+                    } else if (data.status === "error") {
+                        showToast(data.message, true);
+                        
+                        btn.innerHTML = '<i data-lucide="refresh-cw" size="14"></i> 重試提取';
+                        btn.className = "mt-2 text-xs bg-red-600 hover:bg-red-500 text-white py-1.5 px-3 rounded flex items-center gap-1 transition-colors w-fit";
+                        btn.disabled = false;
+                        lucide.createIcons();
+                        return; // 終止輪詢
+                    }
+                    
+                    // 若狀態仍為 processing，計算下一次的延遲時間
+                    attempts++;
+                    // 每次延遲增加 1.5 倍，最高上限為 10 秒 (大幅減少伺服器請求)
+                    if (delay < 10000) {
+                        delay = Math.min(10000, delay * 1.5);
+                    }
+                    
+                    if (attempts < 60) { // 最高重試 60 次 (約等待 8~10 分鐘)
+                        setTimeout(checkStatus, delay);
+                    } else {
+                        // 逾時處理
+                        showToast("影片處理時間較長，請稍後直接至收藏夾檢查", false);
+                        btn.innerHTML = '<i data-lucide="check-circle" size="14"></i> 處理中 (背景執行)';
+                        btn.className = "mt-2 text-xs bg-slate-600 text-white font-bold py-1.5 px-3 rounded flex items-center gap-1 transition-colors w-fit";
+                        lucide.createIcons();
+                    }
+                    
+                } catch (err) {
+                    console.error("Polling error:", err);
+                    attempts++;
+                    if (attempts < 60) {
+                        setTimeout(checkStatus, delay); // 網路錯誤時保持原延遲重試
+                    } else {
+                        showToast("無法獲取任務狀態，請稍後檢查您的收藏夾", true);
+                        btn.innerHTML = originalHtml;
+                        btn.className = originalClasses;
+                        btn.disabled = false;
+                        lucide.createIcons();
+                    }
+                }
+            };
+
+            // 啟動第一次檢查
+            setTimeout(checkStatus, delay);
         }
 
         initTelegramUser();
