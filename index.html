@@ -303,10 +303,10 @@
                             </div>
                             <div class="flex gap-2 w-full">
                                 <button onclick="ubLogout()" class="flex-1 bg-red-600/80 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm border border-red-500">
-                                    <i data-lucide="log-out" size="16"></i> 安全登出
+                                    <i data-lucide="log-out" size="16"></i> 登出
                                 </button>
                                 <button id="ub-btn-renew" onclick="ubRenewSession()" class="hidden flex-1 bg-blue-600/80 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg items-center justify-center gap-2 transition-colors text-sm border border-blue-500">
-                                    <i data-lucide="refresh-cw" size="16"></i> 繼續對話
+                                    <i data-lucide="refresh-cw" size="16"></i> 繼續
                                 </button>
                             </div>
                         </div>
@@ -1206,7 +1206,7 @@
                 if (remain <= 0) {
                     document.getElementById('ub-warning-modal').classList.remove('active');
                     clearUbSession();
-                    showToast("Session 已過期，連線已自動安全登出。", true);
+                    showToast("Session 已過期，連線已自動登出。", true);
                     setTimeout(() => location.reload(), 2000); 
                 }
             }, 1000);
@@ -1273,7 +1273,7 @@
                 // 無論後端是否成功，前端都強制清空登出
                 clearUbSession();
                 initUserbotView();
-                showToast("✅ 已成功安全登出", false);
+                showToast("✅ 已成功登出", false);
             }
         }
 
