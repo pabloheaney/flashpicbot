@@ -1214,7 +1214,7 @@
 
         function closeUbWarningModal() {
             document.getElementById('ub-warning-modal').classList.remove('active');
-            // 使用者點擊關閉後，將「繼續對話」按鈕顯示在「安全登出」旁邊
+            // 使用者點擊關閉後，將「繼續」按鈕顯示在「登出」旁邊
             const renewBtn = document.getElementById('ub-btn-renew');
             if(renewBtn) {
                 renewBtn.classList.remove('hidden');
@@ -1259,7 +1259,7 @@
 
         async function ubLogout() {
             // 提供原生的確認對話框，防止誤觸
-            if (!confirm("確定要安全登出嗎？這將會清除目前的 Telegram 連線紀錄。")) return;
+            if (!confirm("確定要登出嗎？這將會中斷目前的 Telegram 連線。")) return;
             
             try {
                 // 呼叫後端主動登出 (徹底銷毀 Telegram Session)
