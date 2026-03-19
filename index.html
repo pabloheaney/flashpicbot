@@ -294,18 +294,18 @@
 
                     <!-- 狀態 3: 存活倒數與對話列表/視窗 -->
                     <div id="ub-active-session" class="hidden flex-col h-full pb-10">
-                        <div class="bg-red-900/30 border border-red-500/50 rounded-lg p-3 flex flex-col mb-4">
+                        <div class="bg-slate-800/60 border border-purple-500/30 rounded-xl p-4 flex flex-col mb-4 shadow-[0_0_15px_rgba(168,85,247,0.1)]">
                             <div class="flex items-center justify-between mb-3">
-                                <div class="flex items-center gap-2 text-red-400 font-bold">
-                                    <i data-lucide="timer" class="animate-pulse"></i> 自動登出倒數
+                                <div class="flex items-center gap-2 text-purple-300 font-bold text-sm">
+                                    <i data-lucide="timer" class="animate-pulse text-purple-400 w-4 h-4"></i> 自動登出倒數
                                 </div>
-                                <div id="ub-timer" class="text-2xl font-mono font-black text-red-400">15:00</div>
+                                <div id="ub-timer" class="text-2xl font-mono font-black text-purple-400 drop-shadow-md">15:00</div>
                             </div>
                             <div class="flex gap-2 w-full">
-                                <button onclick="ubLogout()" class="flex-1 bg-red-600/80 hover:bg-red-500 text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm border border-red-500">
+                                <button onclick="ubLogout()" class="flex-1 bg-slate-700/80 hover:bg-slate-600 text-slate-200 font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2 transition-colors text-sm border border-slate-600/50">
                                     <i data-lucide="log-out" size="16"></i> 登出
                                 </button>
-                                <button id="ub-btn-renew" onclick="ubRenewSession()" class="hidden flex-1 bg-blue-600/80 hover:bg-blue-500 text-white font-bold py-2 px-4 rounded-lg items-center justify-center gap-2 transition-colors text-sm border border-blue-500">
+                                <button id="ub-btn-renew" onclick="ubRenewSession()" class="hidden flex-1 bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-4 rounded-lg items-center justify-center gap-2 transition-colors text-sm border border-purple-500 shadow-[0_0_10px_rgba(168,85,247,0.3)]">
                                     <i data-lucide="refresh-cw" size="16"></i> 繼續
                                 </button>
                             </div>
@@ -430,18 +430,18 @@
         </div>
     </div>
 
-    <!-- 2 分鐘續約警告彈窗 -->
+    <!-- 2 分鐘續約警告彈窗 (修改為紫色風格) -->
     <div id="ub-warning-modal" class="modal-overlay">
-        <div class="modal-content relative bg-slate-900 border border-red-500/50 shadow-[0_0_30px_rgba(239,68,68,0.3)]">
-            <h2 class="text-xl font-bold mb-3 flex items-center gap-2 text-red-400">
-                <i data-lucide="alert-triangle"></i> 連線即將中斷
+        <div class="modal-content relative bg-slate-900 border border-purple-500/50 shadow-[0_0_30px_rgba(168,85,247,0.3)]">
+            <h2 class="text-xl font-bold mb-3 flex items-center gap-2 text-purple-400">
+                <i data-lucide="clock"></i> 連線即將中斷
             </h2>
             <p class="text-slate-300 text-sm mb-6 leading-relaxed">
-                為保護您的帳號安全，閃圖助手將在 <strong class="text-white bg-red-500/20 px-1 rounded">2分鐘</strong> 後自動登出。<br><br>如需繼續使用，請按「繼續」。
+                為保護您的帳號安全，閃圖助手將在 <strong class="text-purple-200 bg-purple-500/30 px-1 rounded">2分鐘</strong> 後自動登出。<br><br>如需繼續使用，請按「繼續」。
             </p>
             <div class="flex gap-3">
                 <button onclick="closeUbWarningModal()" class="flex-1 px-4 py-3 bg-slate-700 hover:bg-slate-600 text-white rounded-xl font-bold transition-colors">關閉</button>
-                <button onclick="ubRenewSession()" class="flex-1 px-4 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
+                <button onclick="ubRenewSession()" class="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-500 text-white rounded-xl font-bold flex items-center justify-center gap-2 transition-colors">
                     <i data-lucide="check" size="18"></i> 繼續
                 </button>
             </div>
