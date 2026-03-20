@@ -1,0 +1,173 @@
+// js/gacha.js
+
+/**
+ * 檢查抽卡冷卻時間並更新按鈕狀態
+ */
+function checkCooldown() {
+    const btn = document.getElementById('summon-btn');
+    const btnText = document.getElementById('summon-btn-text');
+    if (!btn || !btnText) return;
+
+    const now = Date.now();
+    const timeSinceLastDraw = now - gameState.lastDrawTime;
+
+    if (timeSinceLastDraw < COOLDOWN_TIME) {
+        btn.disabled = true;
+        btn.classList.remove('bg-gradient-to-r', 'from-blue-600', 'to-indigo-700');
+        const rem = COOLDOWN_TIME - timeSinceLastDraw;
+        const h = Math.floor(rem / (1000 * 60 * 60)), m = Math.floor((rem % (1000 * 60 * 60)) / (1000 * 60)), s = Math.floor((rem % (1000 * 60)) / 1000);
+        btnText.innerText = `冷卻中 ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    } else {
+        if (btn.disabled) {
+            btn.disabled = false;
+            btn.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-indigo-700');
+            btnText.innerText = '十連抽';
+            btn.classList.add('animate-bounce');
+            setTimeout(() => btn.classList.remove('animate-bounce'), 1000);
+        }
+    }
+}
+setInterval(checkCooldown, 1000);
+
+/**
+ * 建立單張翻牌卡片元素
+ */
+function createCardElement(index, rarityId, amount) {
+    const config = raritiesConfig[rarityId];
+    const scene = document.createElement('div');
+    scene.className = `scene opacity-0 translate-y-4 transition-all duration-500 ${config.colorClass}`;
+    scene.style.transitionDelay = `${index * 50}ms`;
+
+    const card = document.createElement('div');
+    card.className = 'card'; card.dataset.rewardClaimed = "false";
+
+    card.innerHTML = `
+        <div class="card-back card-face"><i data-lucide="sparkles" class="card-back-logo"></i></div>
+        <div class="card-front card-face">
+            <div class="text-xs font-bold uppercase tracking-wider mb-2 opacity-70">${config.name}</div>
+            <div class="flex-1 flex flex-col items-center justify-center">
+                <i data-lucide="${config.icon}" style="color: ${config.iconColor}; width: 48px; height: 48px; margin-bottom: 8px;"></i>
+                <div class="amount-text" style="color: ${config.iconColor}">${amount}</div>
+            </div>
+            <div class="font-bold text-lg leading-tight mt-1">張閃卡</div>
+        </div>`;
+    scene.appendChild(card);
+
+    let isFlipped = false;
+    const flipCard = () => {
+        if (isFlipped) return;
+        isFlipped = true; card.classList.add('is-flipped'); card.classList.remove('is-peeking');
+        if (card.dataset.rewardClaimed === "false") {
+            gameState.totalFlashCards += amount;
+            card.dataset.rewardClaimed = "true";
+            if (typeof updateStatsUI === 'function') updateStatsUI();
+        }
+        if (rarityId === 'legendary') createConfetti(scene);
+        setTimeout(() => card.querySelector('.card-front').classList.add('flash'), 150);
+    };
+
+    scene.addEventListener('click', flipCard);
+    scene.addEventListener('touchstart', (e) => { if (e.touches.length === 1) card.classList.add('is-peeking'); }, { passive: true });
+    scene.addEventListener('touchend', () => { card.classList.remove('is-peeking'); flipCard(); });
+    scene.addEventListener('touchcancel', () => card.classList.remove('is-peeking'));
+
+    return scene;
+}
+
+/**
+ * 執行十連抽
+ */
+async function drawCards() {
+    const btn = document.getElementById('summon-btn');
+    if (Date.now() - gameState.lastDrawTime < COOLDOWN_TIME) {
+        if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+        return;
+    }
+
+    btn.disabled = true; document.getElementById('summon-btn-text').innerText = "召喚中...";
+
+    try {
+        const res = await fetch(`${API_URL_GACHA}/api/draw`, { method: "POST", headers: getAuthHeaders() });
+        if (!res.ok) throw new Error((await res.json()).detail || "伺服器錯誤");
+        const data = await res.json();
+        
+        if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+
+        gameState.lastDrawTime = Date.now(); 
+        checkCooldown();
+        gameState.totalFlashCards = data.new_balance - data.total_won; 
+        if (typeof updateStatsUI === 'function') updateStatsUI();
+
+        const grid = document.getElementById('card-grid'); grid.innerHTML = '';
+        const amounts = { 'common': 1, 'advanced': 5, 'rare': 10, 'legendary': 100 };
+
+        data.results.forEach((rarityId, i) => {
+            const cardEl = createCardElement(i, rarityId, amounts[rarityId]);
+            grid.appendChild(cardEl);
+            requestAnimationFrame(() => setTimeout(() => cardEl.classList.remove('opacity-0', 'translate-y-4'), 50));
+        });
+        if (window.lucide) lucide.createIcons();
+
+    } catch (error) {
+        showToast(error.message, true); btn.disabled = false; checkCooldown();
+    }
+}
+
+/**
+ * 商店控制與購買邏輯
+ */
+function openShop() { document.getElementById('shop-modal').classList.add('active'); }
+function closeShop() { document.getElementById('shop-modal').classList.remove('active'); }
+
+document.getElementById('shop-modal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeShop(); });
+
+async function purchaseVIP(type, btnElement) {
+    const orig = btnElement.innerHTML;
+    btnElement.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="16"></i> 處理中`;
+    btnElement.disabled = true;
+
+    try {
+        const res = await fetch(`${API_URL_GACHA}/api/buy_vip`, { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ type: type }) });
+        if (!res.ok) throw new Error((await res.json()).detail || "餘額不足或兌換失敗");
+
+        if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
+        btnElement.innerHTML = `<i data-lucide="check"></i> 成功`; btnElement.classList.add('bg-green-600');
+        
+        setTimeout(() => { btnElement.innerHTML = orig; btnElement.classList.remove('bg-green-600'); btnElement.disabled = false; if (window.lucide) lucide.createIcons(); }, 1500);
+        
+        if (typeof loadGame === 'function') await loadGame();
+        
+        window.groupsLoaded = false;
+        if (document.getElementById('tab-groups').classList.contains('active') && typeof renderGroupsView === 'function') {
+            renderGroupsView();
+        }
+
+    } catch (error) {
+        if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
+        showToast(error.message, true);
+        btnElement.innerHTML = orig; btnElement.disabled = false; btnElement.classList.add('animate-pulse', 'bg-red-600');
+        setTimeout(() => btnElement.classList.remove('animate-pulse', 'bg-red-600'), 500);
+        if (window.lucide) lucide.createIcons();
+    }
+}
+
+/**
+ * 撒花特效 (傳說級別翻卡時觸發)
+ */
+function createConfetti(element) {
+    const rect = element.getBoundingClientRect(), canvas = document.getElementById('particles'), ctx = canvas.getContext('2d');
+    canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+    const particles = [], cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+    for (let i = 0; i < 50; i++) particles.push({ x: cx, y: cy, vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15, life: 1.2, color: `hsl(${40 + Math.random() * 20}, 100%, 50%)` });
+    function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height); let active = false;
+        particles.forEach(p => {
+            if (p.life > 0) {
+                active = true; p.x += p.vx; p.y += p.vy; p.vy += 0.3; p.life -= 0.02;
+                ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill();
+            }
+        });
+        if (active) requestAnimationFrame(animate); else ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+    animate();
+}

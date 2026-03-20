@@ -4,143 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>閃圖助手Mini App</title>
+    
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;600;700;900&display=swap');
-
-        :root {
-            --safe-area-inset-bottom: env(safe-area-inset-bottom, 0px);
-        }
-
-        body {
-            font-family: 'Noto Sans TC', sans-serif;
-            background-color: #0f172a;
-            background-image: radial-gradient(circle at 50% 50%, #1e293b 0%, #0f172a 100%);
-            color: white;
-            min-height: 100vh;
-            overflow-x: hidden;
-            user-select: none;
-            -webkit-user-select: none;
-            padding-top: 80px;
-            padding-bottom: calc(80px + var(--safe-area-inset-bottom)); 
-        }
-
-        .stats-bar {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 70px;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 100;
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 0 16px;
-            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-            transition: all 0.3s ease;
-        }
-
-        body.vip-standard .stats-bar { border-bottom: 1px solid #94a3b8; background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(51, 65, 85, 0.95)); }
-        body.vip-premium .stats-bar { border-bottom: 1px solid #eab308; background: linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(88, 28, 135, 0.95)); }
-
-        .bottom-nav {
-            position: fixed;
-            bottom: 0; left: 0; width: 100%;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            z-index: 100;
-            display: flex; justify-content: space-around;
-            padding-bottom: var(--safe-area-inset-bottom);
-        }
-        
-        .nav-item {
-            flex: 1; padding: 12px 0;
-            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-            color: #64748b; transition: all 0.2s; cursor: pointer;
-        }
-        .nav-item.active { color: #60a5fa; text-shadow: 0 0 10px rgba(96, 165, 250, 0.5); }
-        .nav-item.active svg { stroke: #60a5fa; transform: translateY(-2px); }
-        .nav-item svg { transition: transform 0.2s; }
-
-        .slider-viewport {
-            width: 100%;
-            overflow-x: hidden;
-            position: relative;
-        }
-        .slider-container {
-            display: flex;
-            width: 400%;
-            transition: transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
-            will-change: transform;
-            align-items: flex-start;
-        }
-        .slide-page {
-            width: 25%;
-            flex-shrink: 0;
-            opacity: 0.5;
-            transition: opacity 0.4s ease;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .slide-page.active {
-            opacity: 1;
-            pointer-events: auto;
-        }
-
-        .scene { perspective: 1000px; cursor: pointer; width: 100%; aspect-ratio: 2/3; }
-        .card { width: 100%; height: 100%; position: relative; transform-style: preserve-3d; transition: transform 0.6s cubic-bezier(0.4, 0.2, 0.2, 1), box-shadow 0.3s ease; border-radius: 12px; }
-        .card.is-flipped { transform: rotateY(180deg); }
-        .card::after { content: ''; position: absolute; top: -2px; left: -2px; right: -2px; bottom: -2px; border-radius: 14px; z-index: -1; opacity: 0; transition: opacity 0.3s ease, box-shadow 0.3s ease; }
-        @media (hover: hover) { .scene:hover .card:not(.is-flipped)::after { opacity: 1; } }
-        .card.is-peeking:not(.is-flipped)::after { opacity: 1; }
-
-        .rarity-common .card::after { box-shadow: 0 0 15px 2px rgba(255, 255, 255, 0.5); background: rgba(255, 255, 255, 0.3); }
-        .rarity-common .card-front { border: 2px solid #ccc; background: linear-gradient(135deg, #e0e0e0, #f3f4f6); color: #333; }
-        .rarity-advanced .card::after { box-shadow: 0 0 15px 3px rgba(59, 130, 246, 0.7); background: rgba(59, 130, 246, 0.4); }
-        .rarity-advanced .card-front { border: 2px solid #3b82f6; background: linear-gradient(135deg, #eff6ff, #bfdbfe); color: #1e40af; }
-        .rarity-rare .card::after { box-shadow: 0 0 20px 4px rgba(168, 85, 247, 0.8); background: rgba(168, 85, 247, 0.5); }
-        .rarity-rare .card-front { border: 2px solid #a855f7; background: linear-gradient(135deg, #faf5ff, #e9d5ff); color: #6b21a8; }
-        .rarity-legendary .card::after { box-shadow: 0 0 25px 6px rgba(234, 179, 8, 0.9); background: rgba(234, 179, 8, 0.6); animation: pulse-gold 2s infinite; }
-        .rarity-legendary .card-front { border: 2px solid #eab308; background: linear-gradient(135deg, #fefce8, #fef08a); color: #854d0e; box-shadow: inset 0 0 20px rgba(234, 179, 8, 0.5); }
-
-        @keyframes pulse-gold { 0% { box-shadow: 0 0 20px 5px rgba(234, 179, 8, 0.7); } 50% { box-shadow: 0 0 30px 10px rgba(250, 204, 21, 0.9); } 100% { box-shadow: 0 0 20px 5px rgba(234, 179, 8, 0.7); } }
-
-        .card-face { position: absolute; width: 100%; height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center; border-radius: 12px; overflow: hidden; }
-        .card-back { background: #1e293b; background-image: radial-gradient(#334155 15%, transparent 16%), radial-gradient(#334155 15%, transparent 16%); background-size: 20px 20px; background-position: 0 0, 10px 10px; border: 2px solid #4b5563; }
-        .card-back-logo { width: 50%; height: 50%; opacity: 0.3; color: white; }
-        .card-front { transform: rotateY(180deg); padding: 10px; text-align: center; }
-
-        .flash { animation: flash-animation 0.5s ease-out; }
-        @keyframes flash-animation { 0% { filter: brightness(3); scale: 1.05; } 100% { filter: brightness(1); scale: 1; } }
-        
-        #particles { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
-
-        .btn-glow { box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); transition: all 0.3s ease; }
-        .btn-glow:not(:disabled):active { transform: translateY(1px); }
-        .btn-glow:disabled { background: #334155; border-color: #475569; color: #94a3b8; cursor: not-allowed; box-shadow: none; transform: none; }
-        .btn-secondary { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); transition: all 0.2s; }
-        
-        .amount-text { font-size: 2.5rem; font-weight: 900; line-height: 1; }
-        .rarity-legendary .amount-text { text-shadow: 0 2px 4px rgba(0,0,0,0.2); font-size: 3rem; }
-
-        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); display: flex; align-items: center; justify-content: center; z-index: 200; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; backdrop-filter: blur(5px); }
-        .modal-overlay.active { opacity: 1; pointer-events: auto; }
-        .modal-content { background: #1e293b; border: 1px solid #475569; border-radius: 16px; width: 90%; max-width: 400px; padding: 24px; transform: translateY(20px); transition: transform 0.3s ease; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5); }
-        .modal-overlay.active .modal-content { transform: translateY(0); }
-
-        .announcement-card {
-            background: rgba(30, 41, 59, 0.7);
-            border: 1px solid rgba(71, 85, 105, 0.5);
-            border-radius: 12px; padding: 16px; margin-bottom: 16px;
-        }
-
-        #toast-container { position: fixed; top: 20px; left: 50%; transform: translateX(-50%); z-index: 300; display: flex; flex-direction: column; gap: 10px; pointer-events: none; }
-        .toast { background: rgba(15, 23, 42, 0.95); border: 1px solid #475569; color: white; padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); backdrop-filter: blur(5px); opacity: 0; transform: translateY(-20px); transition: all 0.3s ease; display: flex; align-items: center; gap: 8px; }
-        .toast.show { opacity: 1; transform: translateY(0); }
-    </style>
+    
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body class="flex flex-col items-center">
 
@@ -173,7 +42,6 @@
     <div class="slider-viewport">
         <div class="slider-container" id="slider-container">
             
-            <!-- 頁面 1: 抽卡 -->
             <div id="view-gacha" class="slide-page active">
                 <header class="text-center mb-6 mt-4 relative z-10 px-4 w-full">
                     <h1 class="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-blue-300 via-purple-300 to-yellow-300 mb-2 drop-shadow-lg">
@@ -208,31 +76,19 @@
                     <div id="info-content" class="overflow-hidden transition-all duration-300 max-h-0 opacity-0 mt-2">
                         <div class="bg-slate-800/40 border border-slate-700/50 rounded-xl p-4 backdrop-blur-sm flex flex-col gap-3">
                             <div class="flex items-center justify-between p-3 rounded-lg border border-slate-500/30 bg-slate-700/20 shadow-inner">
-                                <div class="flex items-center gap-3">
-                                    <span class="text-slate-300 font-bold text-lg">一般</span>
-                                    <span class="text-xs font-medium text-slate-400 bg-slate-800/80 px-2 py-1 rounded">機率 80%</span>
-                                </div>
+                                <div class="flex items-center gap-3"><span class="text-slate-300 font-bold text-lg">一般</span><span class="text-xs font-medium text-slate-400 bg-slate-800/80 px-2 py-1 rounded">機率 80%</span></div>
                                 <span class="text-xl font-black text-slate-200">1 <span class="text-sm font-normal text-slate-400">張</span></span>
                             </div>
                             <div class="flex items-center justify-between p-3 rounded-lg border border-blue-500/30 bg-blue-900/20 shadow-inner">
-                                <div class="flex items-center gap-3">
-                                    <span class="text-blue-400 font-bold text-lg">高級</span>
-                                    <span class="text-xs font-medium text-blue-400 bg-blue-950/80 px-2 py-1 rounded">機率 15%</span>
-                                </div>
+                                <div class="flex items-center gap-3"><span class="text-blue-400 font-bold text-lg">高級</span><span class="text-xs font-medium text-blue-400 bg-blue-950/80 px-2 py-1 rounded">機率 15%</span></div>
                                 <span class="text-xl font-black text-blue-300">5 <span class="text-sm font-normal text-blue-400/70">張</span></span>
                             </div>
                             <div class="flex items-center justify-between p-3 rounded-lg border border-purple-500/30 bg-purple-900/20 shadow-inner">
-                                <div class="flex items-center gap-3">
-                                    <span class="text-purple-400 font-bold text-lg">稀有</span>
-                                    <span class="text-xs font-medium text-purple-400 bg-purple-950/80 px-2 py-1 rounded">機率 4%</span>
-                                </div>
+                                <div class="flex items-center gap-3"><span class="text-purple-400 font-bold text-lg">稀有</span><span class="text-xs font-medium text-purple-400 bg-purple-950/80 px-2 py-1 rounded">機率 4%</span></div>
                                 <span class="text-xl font-black text-purple-300">10 <span class="text-sm font-normal text-purple-400/70">張</span></span>
                             </div>
                             <div class="flex items-center justify-between p-3 rounded-lg border border-yellow-500/40 bg-yellow-900/20 shadow-[inset_0_0_15px_rgba(234,179,8,0.15)] relative overflow-hidden">
-                                <div class="flex items-center gap-3 relative z-10">
-                                    <span class="text-yellow-400 font-bold text-lg drop-shadow-md">傳說</span>
-                                    <span class="text-xs font-medium text-yellow-400 bg-yellow-950/80 px-2 py-1 rounded border border-yellow-500/20">機率 1%</span>
-                                </div>
+                                <div class="flex items-center gap-3 relative z-10"><span class="text-yellow-400 font-bold text-lg drop-shadow-md">傳說</span><span class="text-xs font-medium text-yellow-400 bg-yellow-950/80 px-2 py-1 rounded border border-yellow-500/20">機率 1%</span></div>
                                 <span class="text-xl font-black text-yellow-300 relative z-10 drop-shadow-md">100 <span class="text-sm font-normal text-yellow-400/70">張</span></span>
                             </div>
                         </div>
@@ -241,21 +97,17 @@
 
                 <div id="card-grid" class="grid grid-cols-2 md:grid-cols-5 gap-4 md:gap-6 w-full max-w-6xl z-10 pb-10 px-4">
                     <div class="text-slate-500 col-span-full text-center py-20 bg-slate-800/30 rounded-lg border border-slate-700/50">
-                        <i data-lucide="clock" class="mx-auto mb-2 opacity-50 animate-pulse"></i>
-                        正在連線至伺服器...
+                        <i data-lucide="clock" class="mx-auto mb-2 opacity-50 animate-pulse"></i>正在連線至伺服器...
                     </div>
                 </div>
             </div>
 
-            <!-- 頁面 2: Userbot 頁面 (對應 -25% 滑動) -->
             <div id="view-userbot" class="slide-page">
                 <div class="w-full max-w-3xl px-4 mt-4 relative min-h-[70vh]">
                     <div class="flex items-center justify-center gap-2 mb-4 text-2xl font-bold text-purple-400 border-b border-slate-700/50 pb-3">
-                        <i data-lucide="smartphone"></i>
-                        私閃CAP圖功能
+                        <i data-lucide="smartphone"></i>私閃CAP圖功能
                     </div>
 
-                    <!-- 狀態 1: 非高級 VIP 阻擋畫面 -->
                     <div id="ub-unauthorized" class="hidden flex-col items-center justify-center py-10">
                         <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 text-center shadow-xl w-full">
                             <div class="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
@@ -269,7 +121,6 @@
                         </div>
                     </div>
 
-                    <!-- 狀態 2: 登入表單 -->
                     <div id="ub-login-section" class="hidden flex-col gap-4">
                         <div class="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
                             <label class="text-sm text-slate-400 mb-2 block">請先登入至 Telegram (需要輸入國際電話號碼，例如香港號碼輸入+85212345678)</label>
@@ -283,7 +134,6 @@
                             <label class="text-sm text-slate-400 mb-2 block">請輸入 Telegram 收到的驗證碼</label>
                             <input type="text" id="ub-code" placeholder="12345" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-purple-500 focus:outline-none mb-3">
                             
-                            <!-- 新增：重新輸入電話按鈕 -->
                             <div class="text-right mb-3">
                                 <button onclick="clearUbSession(); initUserbotView();" class="text-xs text-purple-400 hover:text-purple-300 transition-colors underline">電話輸入錯誤？按此重新輸入電話號碼</button>
                             </div>
@@ -298,7 +148,6 @@
                         </div>
                     </div>
 
-                    <!-- 狀態 3: 存活倒數與對話列表/視窗 -->
                     <div id="ub-active-session" class="hidden flex-col h-full pb-10">
                         <div class="bg-slate-800/60 border border-purple-500/30 rounded-xl p-4 flex flex-col mb-4 shadow-[0_0_15px_rgba(168,85,247,0.1)]">
                             <div class="flex items-center justify-between mb-3">
@@ -317,55 +166,44 @@
                             </div>
                         </div>
 
-                        <!-- 對話列表 -->
                         <div id="ub-chat-list" class="space-y-2 overflow-y-auto max-h-[50vh] pr-2">
-                            <!-- JS 動態插入 -->
-                        </div>
+                            </div>
 
-                        <!-- 單一对話內容 -->
                         <div id="ub-chat-view" class="hidden flex-col">
                             <button onclick="ubBackToChats()" class="mb-4 text-slate-400 hover:text-white flex items-center gap-1 text-sm bg-slate-800/50 w-fit px-3 py-1.5 rounded-lg border border-slate-700">
                                 <i data-lucide="arrow-left" size="16"></i> 返回列表
                             </button>
                             <div id="ub-messages" class="space-y-4 overflow-y-auto max-h-[50vh] pr-2 flex flex-col">
-                                <!-- JS 動態插入 -->
-                            </div>
+                                </div>
                         </div>
                     </div>
-                    
                 </div>
             </div>
 
-            <!-- 頁面 3: VIP 群組頁面 (對應 -50% 滑動) -->
             <div id="view-groups" class="slide-page">
                 <div class="w-full max-w-3xl px-4 mt-4">
                     <div class="flex items-center justify-center gap-2 mb-6 text-2xl font-bold text-yellow-400 border-b border-slate-700/50 pb-3">
-                        <i data-lucide="link"></i>
-                        查看群組邀請連結
+                        <i data-lucide="link"></i>查看群組邀請連結
                     </div>
-
                     <div id="groups-content" class="pb-10 min-h-[50vh] flex flex-col items-center justify-center">
                         <div class="text-slate-500 flex flex-col items-center gap-2">
-                            <i data-lucide="loader-2" class="animate-spin w-8 h-8"></i>
-                            載入中...
+                            <i data-lucide="loader-2" class="animate-spin w-8 h-8"></i>載入中...
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- 頁面 4: 系統公告頁面 (對應 -75% 滑動) -->
             <div id="view-announcements" class="slide-page">
                 <div class="w-full max-w-3xl px-4 mt-4">
                     <div class="flex items-center justify-center gap-2 mb-6 text-2xl font-bold text-blue-300 border-b border-slate-700/50 pb-3">
-                        <i data-lucide="bell-ring"></i>
-                        系統公告與狀態
+                        <i data-lucide="bell-ring"></i>系統公告與狀態
                     </div>
 
                     <div id="bot-status-container" class="hidden mb-6 bg-slate-800/80 border border-slate-700 rounded-xl p-4 flex items-center justify-between shadow-lg">
                         <div class="flex items-center gap-4">
                             <div class="relative flex h-4 w-4">
-                            <span id="status-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span id="status-indicator" class="relative inline-flex rounded-full h-4 w-4 bg-green-500"></span>
+                                <span id="status-ping" class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                <span id="status-indicator" class="relative inline-flex rounded-full h-4 w-4 bg-green-500"></span>
                             </div>
                             <div>
                                 <div id="bot-status-text" class="font-bold text-lg text-white">Bot 狀態載入中</div>
@@ -376,8 +214,7 @@
 
                     <div id="announcements-list" class="space-y-4 pb-10">
                         <div id="announcement-loading" class="text-center py-12 text-slate-500 bg-slate-800/30 rounded-lg border border-slate-700/50">
-                            <i data-lucide="loader-2" class="mx-auto mb-2 animate-spin"></i>
-                            載入資料中...
+                            <i data-lucide="loader-2" class="mx-auto mb-2 animate-spin"></i>載入資料中...
                         </div>
                     </div>
                 </div>
@@ -386,23 +223,18 @@
         </div>
     </div>
 
-    <!-- 更新的導覽列 -->
     <nav class="bottom-nav">
         <div onclick="switchTab('gacha')" id="tab-gacha" class="nav-item active">
-            <i data-lucide="layout-grid"></i>
-            <span class="text-xs font-bold">抽卡</span>
+            <i data-lucide="layout-grid"></i><span class="text-xs font-bold">抽卡</span>
         </div>
         <div onclick="switchTab('userbot')" id="tab-userbot" class="nav-item">
-            <i data-lucide="smartphone"></i>
-            <span class="text-xs font-bold">私閃CAP圖</span>
+            <i data-lucide="smartphone"></i><span class="text-xs font-bold">私閃CAP圖</span>
         </div>
         <div onclick="switchTab('groups')" id="tab-groups" class="nav-item">
-            <i data-lucide="users"></i>
-            <span class="text-xs font-bold">群組</span>
+            <i data-lucide="users"></i><span class="text-xs font-bold">群組</span>
         </div>
         <div onclick="switchTab('announcements')" id="tab-announcements" class="nav-item">
-            <i data-lucide="bell"></i>
-            <span class="text-xs font-bold">公告</span>
+            <i data-lucide="bell"></i><span class="text-xs font-bold">公告</span>
         </div>
     </nav>
 
@@ -436,7 +268,6 @@
         </div>
     </div>
 
-    <!-- 2 分鐘續約警告彈窗 (修改為紫色風格) -->
     <div id="ub-warning-modal" class="modal-overlay">
         <div class="modal-content relative bg-slate-900 border border-purple-500/50 shadow-[0_0_30px_rgba(168,85,247,0.3)]">
             <h2 class="text-xl font-bold mb-3 flex items-center gap-2 text-purple-400">
@@ -456,1040 +287,11 @@
 
     <canvas id="particles"></canvas>
 
-    <script>
-        const API_URL_GACHA = "https://api.atlrunner.dpdns.org"; 
-        const API_URL_ANNOUNCE = "https://atlrunner.dpdns.org";
-        const API_URL_USERBOT = "https://api2.atlrunner.dpdns.org"; 
+    <script src="js/config.js"></script>
+    <script src="js/main.js"></script>
+    <script src="js/gacha.js"></script>
+    <script src="js/userbot.js"></script>
+    <script src="js/task_manager.js"></script>
 
-        lucide.createIcons();
-        const COOLDOWN_TIME = 24 * 60 * 60 * 1000;
-        
-        let gameState = { totalFlashCards: 0, vipState: { level: 'none', expiry: 0 }, lastDrawTime: 0 };
-        const raritiesConfig = {
-            'common': { name: '一般', colorClass: 'rarity-common', iconColor: '#374151', icon: 'ticket' },
-            'advanced': { name: '高級', colorClass: 'rarity-advanced', iconColor: '#1e40af', icon: 'copy' },
-            'rare': { name: '稀有', colorClass: 'rarity-rare', iconColor: '#6b21a8', icon: 'layers' },
-            'legendary': { name: '傳說', colorClass: 'rarity-legendary', iconColor: '#854d0e', icon: 'crown' }
-        };
-
-        // [安全升級] 修復 XSS 漏洞：使用 createTextNode 防止 HTML 注入
-        function showToast(message, isError = false) {
-            if (window.Telegram?.WebApp && window.Telegram.WebApp.showAlert) {
-                window.Telegram.WebApp.showAlert(message);
-                return;
-            }
-            const container = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = 'toast';
-            
-            // 安全插入圖標
-            toast.innerHTML = `<i data-lucide="${isError ? 'alert-circle' : 'info'}" class="${isError ? 'text-red-400' : 'text-blue-400'}"></i>`;
-            
-            // 安全插入純文字，拒絕執行腳本
-            const textNode = document.createTextNode(" " + message);
-            toast.appendChild(textNode);
-            
-            container.appendChild(toast);
-            lucide.createIcons();
-            
-            setTimeout(() => toast.classList.add('show'), 10);
-            
-            setTimeout(() => {
-                toast.classList.remove('show');
-                setTimeout(() => toast.remove(), 300);
-            }, 3000);
-        }
-
-        function switchTab(tabName) {
-            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-            document.getElementById(`tab-${tabName}`).classList.add('active');
-
-            const slider = document.getElementById('slider-container');
-            document.querySelectorAll('.slide-page').forEach(el => el.classList.remove('active'));
-            document.getElementById(`view-${tabName}`).classList.add('active');
-
-            if (tabName === 'gacha') {
-                slider.style.transform = 'translateX(0%)';
-            } else if (tabName === 'userbot') {
-                slider.style.transform = 'translateX(-25%)';
-                initUserbotView();
-            } else if (tabName === 'groups') {
-                slider.style.transform = 'translateX(-50%)';
-                renderGroupsView();
-            } else if (tabName === 'announcements') {
-                slider.style.transform = 'translateX(-75%)';
-                if (!window.announcementsLoaded) {
-                    loadAnnouncements();
-                    window.announcementsLoaded = true;
-                }
-            }
-
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-
-            if (window.Telegram?.WebApp?.HapticFeedback) {
-                window.Telegram.WebApp.HapticFeedback.selectionChanged();
-            }
-        }
-
-        async function renderGroupsView() {
-            const container = document.getElementById('groups-content');
-            const now = Date.now();
-            
-            if (gameState.vipState.level === 'premium' && gameState.vipState.expiry > now) {
-                if (!window.groupsLoaded) {
-                    container.innerHTML = `<div class="text-slate-500 flex flex-col items-center gap-2"><i data-lucide="loader-2" class="animate-spin w-8 h-8"></i>讀取連結中...</div>`;
-                    lucide.createIcons();
-                    await loadInviteLinks();
-                    window.groupsLoaded = true;
-                }
-            } else {
-                container.innerHTML = `
-                    <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 text-center shadow-xl max-w-sm w-full mx-auto">
-                        <div class="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-slate-600 shadow-inner">
-                            <i data-lucide="lock" class="w-8 h-8 text-slate-400"></i>
-                        </div>
-                        <h3 class="text-xl font-bold text-white mb-2">高級 VIP 專屬功能</h3>
-                        <p class="text-slate-400 text-sm mb-6 leading-relaxed">此區域僅限高級 VIP 使用。<br>前往 Bot 升級以解鎖並加入所有精選討論群組！</p>
-                        <button onclick="goToBotToUpgrade()" class="w-full btn-glow bg-gradient-to-r from-yellow-600 to-yellow-500 hover:from-yellow-500 hover:to-yellow-400 text-white font-bold py-3 px-6 rounded-xl flex items-center justify-center gap-2 transition-all">
-                            <i data-lucide="zap" class="w-5 h-5"></i>
-                            前往 Bot 升級
-                        </button>
-                    </div>
-                `;
-                lucide.createIcons();
-            }
-        }
-
-        async function loadInviteLinks() {
-            const container = document.getElementById('groups-content');
-            try {
-                const res = await fetch(`${API_URL_GACHA}/api/invite_links`, { headers: getAuthHeaders() });
-                if (!res.ok) {
-                    if(res.status === 403) throw new Error("權限不足，請確認您的 VIP 狀態");
-                    throw new Error("無法讀取邀請連結");
-                }
-                const data = await res.json();
-                
-                if (data.data && data.data.length > 0) {
-                    const groupsByCategory = {};
-                    data.data.forEach(group => {
-                        if (!group.is_active) return;
-                        const cat = group.category || '未分類';
-                        if (!groupsByCategory[cat]) groupsByCategory[cat] = [];
-                        groupsByCategory[cat].push(group);
-                    });
-                    
-                    const lastUpdated = data.meta?.last_updated ? new Date(data.meta.last_updated).toLocaleString('zh-TW', { hour12: false }) : new Date().toLocaleString('zh-TW');
-                    
-                    let html = `<div class="text-xs text-slate-400 text-center mb-4"><i data-lucide="clock" class="inline w-3 h-3 mr-1"></i>最後更新時間: ${lastUpdated}</div>`;
-                    html += `<div class="w-full space-y-3 flex flex-col items-stretch">`;
-                    
-                    Object.keys(groupsByCategory).forEach(cat => {
-                        const items = groupsByCategory[cat];
-                        html += `
-                            <div class="bg-slate-800/60 border border-slate-700/50 rounded-xl overflow-hidden shadow-sm">
-                                <button onclick="toggleCategory(this)" class="w-full p-4 flex items-center justify-between text-slate-200 hover:bg-slate-700/60 transition-colors">
-                                    <div class="flex items-center gap-2 font-bold text-lg">
-                                        <i data-lucide="folder-open" class="w-5 h-5 text-yellow-500"></i> ${cat} 
-                                        <span class="text-[10px] bg-slate-700/80 text-slate-300 px-2 py-0.5 rounded-full font-mono">${items.length}</span>
-                                    </div>
-                                    <i data-lucide="chevron-down" class="transition-transform duration-300 w-5 h-5 text-slate-400 chevron-icon"></i>
-                                </button>
-                                <div class="max-h-0 opacity-0 overflow-hidden transition-all duration-300 bg-slate-800/30 category-content">
-                                    <div class="p-3 space-y-2 border-t border-slate-700/50">
-                        `;
-                        
-                        items.forEach(group => {
-                            html += `
-                                        <div class="bg-slate-800/80 border border-yellow-500/20 rounded-lg p-3 flex items-center justify-between hover:border-yellow-500/50 transition-colors">
-                                            <h3 class="text-md font-bold text-slate-200 truncate pr-2 flex items-center gap-2">
-                                                <i data-lucide="message-circle" class="w-4 h-4 text-slate-400"></i>
-                                                ${group.name}
-                                            </h3>
-                                            <button onclick="joinGroup('${group.invite_link}')" class="bg-yellow-500 hover:bg-yellow-400 text-yellow-950 font-bold px-3 py-1.5 rounded-md text-sm flex-shrink-0 flex items-center gap-1 transition-colors">
-                                                加入 <i data-lucide="external-link" class="w-3 h-3"></i>
-                                            </button>
-                                        </div>
-                            `;
-                        });
-                        
-                        html += `
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                    });
-                    
-                    html += `</div>`;
-                    
-                    html += `
-                        <div class="mt-6 p-4 rounded-xl bg-blue-900/20 border border-blue-800/50 text-xs text-blue-300/80 text-center leading-relaxed shadow-inner">
-                            <i data-lucide="info" class="inline w-4 h-4 mr-1 mb-1"></i>管理員會定期更新群組連結。<br>如發現部分群組連結失效，請與客服聯絡。
-                        </div>
-                    `;
-                    
-                    container.innerHTML = html;
-                } else {
-                    container.innerHTML = '<div class="text-slate-500 text-center">目前沒有可用的群組連結</div>';
-                }
-            } catch (error) {
-                console.error(error);
-                container.innerHTML = `<div class="text-red-400 text-center bg-red-900/20 border border-red-700/50 p-4 rounded-xl max-w-sm w-full"><i data-lucide="alert-triangle" class="mx-auto mb-2 w-8 h-8 opacity-80"></i>${error.message}</div>`;
-            }
-            lucide.createIcons();
-        }
-
-        function toggleCategory(btn) {
-            const content = btn.nextElementSibling;
-            const chevron = btn.querySelector('.chevron-icon');
-            
-            if (content.classList.contains('max-h-0')) {
-                content.classList.remove('max-h-0', 'opacity-0');
-                content.classList.add('max-h-[1500px]', 'opacity-100');
-                chevron.style.transform = 'rotate(180deg)';
-                if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.selectionChanged();
-            } else {
-                content.classList.add('max-h-0', 'opacity-0');
-                content.classList.remove('max-h-[1500px]', 'opacity-100');
-                chevron.style.transform = 'rotate(0deg)';
-            }
-        }
-
-        function goToBotToUpgrade() {
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.openTelegramLink('https://t.me/flash_pic_helper_bot');
-            } else {
-                window.open('https://t.me/flash_pic_helper_bot', '_blank');
-            }
-        }
-
-        function joinGroup(url) {
-            if (window.Telegram?.WebApp) {
-                window.Telegram.WebApp.openTelegramLink(url);
-            } else {
-                window.open(url, '_blank');
-            }
-        }
-
-        function toggleInfo() {
-            const content = document.getElementById('info-content');
-            const chevron = document.getElementById('info-chevron');
-            
-            if (content.classList.contains('max-h-0')) {
-                content.classList.remove('max-h-0', 'opacity-0');
-                content.classList.add('max-h-[500px]', 'opacity-100');
-                chevron.style.transform = 'rotate(180deg)';
-                if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.selectionChanged();
-            } else {
-                content.classList.add('max-h-0', 'opacity-0');
-                content.classList.remove('max-h-[500px]', 'opacity-100');
-                chevron.style.transform = 'rotate(0deg)';
-            }
-        }
-
-        function getAuthHeaders() {
-            const tg = window.Telegram?.WebApp;
-            return { "Content-Type": "application/json", "Authorization": (tg && tg.initData) ? `tma ${tg.initData}` : "" };
-        }
-
-        function initTelegramUser() {
-            const tg = window.Telegram?.WebApp;
-            if (tg) {
-                tg.ready();
-                try { tg.expand(); } catch(e) {}
-                const user = tg.initDataUnsafe?.user;
-                if (user) {
-                    document.getElementById('tg-username').textContent = user.username ? `@${user.username}` : user.first_name;
-                    document.getElementById('tg-userid').textContent = `ID: ${user.id}`;
-                } else {
-                    document.getElementById('tg-username').textContent = "冒險者 (Web)";
-                    document.getElementById('tg-userid').textContent = "非 TG 環境";
-                }
-            }
-        }
-
-        async function loadGame() {
-            try {
-                const res = await fetch(`${API_URL_GACHA}/api/user`, { headers: getAuthHeaders() });
-                if (!res.ok) throw new Error("無法連接至伺服器");
-                const data = await res.json();
-                
-                gameState.totalFlashCards = data.balance;
-                gameState.lastDrawTime = data.last_draw_time;
-                if (data.vip) {
-                    gameState.vipState.level = data.vip.level === 0 ? 'premium' : 'standard';
-                    gameState.vipState.expiry = new Date(data.vip.vip_expiry_date).getTime();
-                } else {
-                    gameState.vipState.level = 'none';
-                    gameState.vipState.expiry = 0;
-                }
-                
-                updateStatsUI(); checkCooldown();
-
-                const grid = document.getElementById('card-grid');
-                grid.innerHTML = `<div class="text-slate-500 col-span-full text-center py-20 bg-slate-800/30 rounded-lg border border-slate-700/50"><i data-lucide="sparkles" class="mx-auto mb-2 opacity-50"></i>每天登入，測試你的運氣</div>`;
-                lucide.createIcons();
-            } catch (error) {
-                console.error("載入失敗:", error);
-                document.getElementById('card-grid').innerHTML = `<div class="text-red-400 col-span-full text-center py-20 bg-red-900/20 rounded-lg border border-red-700/50"><i data-lucide="alert-circle" class="mx-auto mb-2 opacity-80"></i>連線伺服器失敗。</div>`;
-                lucide.createIcons();
-            }
-        }
-
-        async function loadAnnouncements() {
-            const listContainer = document.getElementById('announcements-list');
-            try {
-                const response = await fetch(`${API_URL_ANNOUNCE}/?t=${new Date().getTime()}`);
-                if (!response.ok) throw new Error('無法讀取資料');
-                const data = await response.json();
-                
-                if (data.botStatus) {
-                    const statusCard = document.getElementById('bot-status-container');
-                    document.getElementById('bot-status-text').innerText = data.botStatus.text;
-                    document.getElementById('bot-status-subtext').innerText = data.botStatus.subText || '';
-                    document.getElementById('status-indicator').style.backgroundColor = data.botStatus.color || '#22c55e';
-                    
-                    if(data.botStatus.color && data.botStatus.color !== '#22c55e' && data.botStatus.color !== '#2ecc71') {
-                         document.getElementById('status-ping').style.display = 'none';
-                    }
-                    statusCard.style.display = 'flex';
-                }
-
-                listContainer.innerHTML = '';
-                if (data.announcements && data.announcements.length > 0) {
-                    data.announcements.forEach(item => {
-                        const contentHtml = item.content.replace(/\n/g, '<br>');
-                        listContainer.innerHTML += `
-                            <div class="announcement-card">
-                                <div class="text-xs text-blue-400 font-mono mb-1"><i data-lucide="calendar" class="inline w-3 h-3 mr-1"></i>${item.date}</div>
-                                <h3 class="text-lg font-bold text-white mb-2">${item.title}</h3>
-                                <div class="text-slate-300 text-sm leading-relaxed">${contentHtml}</div>
-                            </div>
-                        `;
-                    });
-                } else {
-                    listContainer.innerHTML = '<div class="text-center text-slate-500 py-10">目前沒有公告</div>';
-                }
-                lucide.createIcons();
-            } catch (error) {
-                console.error('Error loading announcements:', error);
-                listContainer.innerHTML = '<div class="text-center text-red-400 py-10"><i data-lucide="wifi-off" class="mx-auto mb-2 opacity-50"></i>無法連線至狀態伺服器</div>';
-                lucide.createIcons();
-            }
-        }
-
-        function checkCooldown() {
-            const btn = document.getElementById('summon-btn');
-            const btnText = document.getElementById('summon-btn-text');
-            const now = Date.now();
-            const timeSinceLastDraw = now - gameState.lastDrawTime;
-
-            if (timeSinceLastDraw < COOLDOWN_TIME) {
-                btn.disabled = true;
-                btn.classList.remove('bg-gradient-to-r', 'from-blue-600', 'to-indigo-700');
-                const rem = COOLDOWN_TIME - timeSinceLastDraw;
-                const h = Math.floor(rem / (1000 * 60 * 60)), m = Math.floor((rem % (1000 * 60 * 60)) / (1000 * 60)), s = Math.floor((rem % (1000 * 60)) / 1000);
-                btnText.innerText = `冷卻中 ${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
-            } else {
-                if (btn.disabled) {
-                    btn.disabled = false;
-                    btn.classList.add('bg-gradient-to-r', 'from-blue-600', 'to-indigo-700');
-                    btnText.innerText = '十連抽';
-                    btn.classList.add('animate-bounce');
-                    setTimeout(() => btn.classList.remove('animate-bounce'), 1000);
-                }
-            }
-        }
-        setInterval(checkCooldown, 1000);
-
-        function updateStatsUI() {
-            const balanceEl = document.getElementById('balance-display');
-            if (parseInt(balanceEl.innerText) !== gameState.totalFlashCards) {
-                balanceEl.innerText = gameState.totalFlashCards;
-                balanceEl.classList.add('scale-125', 'text-yellow-400');
-                setTimeout(() => balanceEl.classList.remove('scale-125', 'text-yellow-400'), 200);
-            }
-
-            const now = Date.now();
-            const vipNameEl = document.getElementById('vip-name');
-            const vipIconContainer = document.getElementById('vip-icon');
-            document.body.classList.remove('vip-standard', 'vip-premium');
-            
-            if (gameState.vipState.expiry > now) {
-                const timeLeft = Math.ceil((gameState.vipState.expiry - now) / (1000 * 60 * 60 * 24));
-                if (gameState.vipState.level === 'premium') {
-                    vipNameEl.innerHTML = `<span class="text-yellow-400">高級VIP</span> 剩餘${timeLeft}天`;
-                    vipIconContainer.className = 'w-5 h-5 rounded-full flex items-center justify-center transition-all bg-yellow-600 shadow-[0_0_5px_rgba(234,179,8,0.5)]';
-                    vipIconContainer.innerHTML = `<i data-lucide="crown" size="12" class="text-white"></i>`;
-                    document.body.classList.add('vip-premium');
-                } else {
-                    vipNameEl.innerHTML = `<span class="text-slate-200">標準VIP</span> 剩餘${timeLeft}天`;
-                    vipIconContainer.className = 'w-5 h-5 rounded-full flex items-center justify-center transition-all bg-slate-500';
-                    vipIconContainer.innerHTML = `<i data-lucide="shield" size="12" class="text-white"></i>`;
-                    document.body.classList.add('vip-standard');
-                }
-            } else {
-                vipNameEl.innerText = '無 VIP';
-                vipIconContainer.className = 'w-5 h-5 rounded-full flex items-center justify-center transition-all bg-slate-700';
-                vipIconContainer.innerHTML = `<i data-lucide="user" size="12" class="text-slate-400"></i>`;
-            }
-            lucide.createIcons();
-            
-            if (document.getElementById('tab-userbot').classList.contains('active')) {
-                initUserbotView();
-            }
-        }
-
-        function createCardElement(index, rarityId, amount) {
-            const config = raritiesConfig[rarityId];
-            const scene = document.createElement('div');
-            scene.className = `scene opacity-0 translate-y-4 transition-all duration-500 ${config.colorClass}`;
-            scene.style.transitionDelay = `${index * 50}ms`;
-
-            const card = document.createElement('div');
-            card.className = 'card'; card.dataset.rewardClaimed = "false";
-
-            card.innerHTML = `
-                <div class="card-back card-face"><i data-lucide="sparkles" class="card-back-logo"></i></div>
-                <div class="card-front card-face">
-                    <div class="text-xs font-bold uppercase tracking-wider mb-2 opacity-70">${config.name}</div>
-                    <div class="flex-1 flex flex-col items-center justify-center">
-                        <i data-lucide="${config.icon}" style="color: ${config.iconColor}; width: 48px; height: 48px; margin-bottom: 8px;"></i>
-                        <div class="amount-text" style="color: ${config.iconColor}">${amount}</div>
-                    </div>
-                    <div class="font-bold text-lg leading-tight mt-1">張閃卡</div>
-                </div>`;
-            scene.appendChild(card);
-
-            let isFlipped = false;
-            const flipCard = () => {
-                if (isFlipped) return;
-                isFlipped = true; card.classList.add('is-flipped'); card.classList.remove('is-peeking');
-                if (card.dataset.rewardClaimed === "false") {
-                    gameState.totalFlashCards += amount;
-                    card.dataset.rewardClaimed = "true";
-                    updateStatsUI();
-                }
-                if (rarityId === 'legendary') createConfetti(scene);
-                setTimeout(() => card.querySelector('.card-front').classList.add('flash'), 150);
-            };
-
-            scene.addEventListener('click', flipCard);
-            scene.addEventListener('touchstart', (e) => { if (e.touches.length === 1) card.classList.add('is-peeking'); }, { passive: true });
-            scene.addEventListener('touchend', () => { card.classList.remove('is-peeking'); flipCard(); });
-            scene.addEventListener('touchcancel', () => card.classList.remove('is-peeking'));
-
-            return scene;
-        }
-
-        async function drawCards() {
-            const btn = document.getElementById('summon-btn');
-            if (Date.now() - gameState.lastDrawTime < COOLDOWN_TIME) {
-                if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
-                return;
-            }
-
-            btn.disabled = true; document.getElementById('summon-btn-text').innerText = "召喚中...";
-
-            try {
-                const res = await fetch(`${API_URL_GACHA}/api/draw`, { method: "POST", headers: getAuthHeaders() });
-                if (!res.ok) throw new Error((await res.json()).detail || "伺服器錯誤");
-                const data = await res.json();
-                
-                if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
-
-                gameState.lastDrawTime = Date.now(); checkCooldown();
-                gameState.totalFlashCards = data.new_balance - data.total_won; updateStatsUI();
-
-                const grid = document.getElementById('card-grid'); grid.innerHTML = '';
-                const amounts = { 'common': 1, 'advanced': 5, 'rare': 10, 'legendary': 100 };
-
-                data.results.forEach((rarityId, i) => {
-                    const cardEl = createCardElement(i, rarityId, amounts[rarityId]);
-                    grid.appendChild(cardEl);
-                    requestAnimationFrame(() => setTimeout(() => cardEl.classList.remove('opacity-0', 'translate-y-4'), 50));
-                });
-                lucide.createIcons();
-
-            } catch (error) {
-                showToast(error.message, true); btn.disabled = false; checkCooldown();
-            }
-        }
-
-        function openShop() { document.getElementById('shop-modal').classList.add('active'); }
-        function closeShop() { document.getElementById('shop-modal').classList.remove('active'); }
-
-        async function purchaseVIP(type, btnElement) {
-            const orig = btnElement.innerHTML;
-            btnElement.innerHTML = `<i data-lucide="loader-2" class="animate-spin" size="16"></i> 處理中`;
-            btnElement.disabled = true;
-
-            try {
-                const res = await fetch(`${API_URL_GACHA}/api/buy_vip`, { method: "POST", headers: getAuthHeaders(), body: JSON.stringify({ type: type }) });
-                if (!res.ok) throw new Error((await res.json()).detail || "餘額不足或兌換失敗");
-
-                if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-                btnElement.innerHTML = `<i data-lucide="check"></i> 成功`; btnElement.classList.add('bg-green-600');
-                
-                setTimeout(() => { btnElement.innerHTML = orig; btnElement.classList.remove('bg-green-600'); btnElement.disabled = false; lucide.createIcons(); }, 1500);
-                
-                await loadGame();
-                
-                window.groupsLoaded = false;
-                if (document.getElementById('tab-groups').classList.contains('active')) {
-                    renderGroupsView();
-                }
-
-            } catch (error) {
-                if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('error');
-                showToast(error.message, true);
-                btnElement.innerHTML = orig; btnElement.disabled = false; btnElement.classList.add('animate-pulse', 'bg-red-600');
-                setTimeout(() => btnElement.classList.remove('animate-pulse', 'bg-red-600'), 500);
-                lucide.createIcons();
-            }
-        }
-
-        document.getElementById('shop-modal').addEventListener('click', (e) => { if (e.target === e.currentTarget) closeShop(); });
-
-        function createConfetti(element) {
-            const rect = element.getBoundingClientRect(), canvas = document.getElementById('particles'), ctx = canvas.getContext('2d');
-            canvas.width = window.innerWidth; canvas.height = window.innerHeight;
-            const particles = [], cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
-            for (let i = 0; i < 50; i++) particles.push({ x: cx, y: cy, vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15, life: 1.2, color: `hsl(${40 + Math.random() * 20}, 100%, 50%)` });
-            function animate() {
-                ctx.clearRect(0, 0, canvas.width, canvas.height); let active = false;
-                particles.forEach(p => {
-                    if (p.life > 0) {
-                        active = true; p.x += p.vx; p.y += p.vy; p.vy += 0.3; p.life -= 0.02;
-                        ctx.globalAlpha = p.life; ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, 4, 0, Math.PI * 2); ctx.fill();
-                    }
-                });
-                if (active) requestAnimationFrame(animate); else ctx.clearRect(0, 0, canvas.width, canvas.height);
-            }
-            animate();
-        }
-
-        setInterval(() => { if (gameState.vipState.expiry > 0 && Date.now() > gameState.vipState.expiry) updateStatsUI(); }, 60000);
-
-        // --- Userbot 擴充邏輯 ---
-        let ubState = {
-            sessionToken: localStorage.getItem('ub_token') || null,
-            pendingSessionToken: localStorage.getItem('ub_pending_token') || null,
-            phoneHash: localStorage.getItem('ub_phone_hash') || null,
-            phone: localStorage.getItem('ub_phone') || '',
-            timerInterval: null,
-            expiryTime: parseInt(localStorage.getItem('ub_expiry')) || 0
-        };
-        let ubWarningShown = false; // 控制彈窗不要一直跳
-
-        function clearUbSession() {
-            ubState.sessionToken = null;
-            ubState.pendingSessionToken = null;
-            ubState.phoneHash = null;
-            ubState.phone = '';
-            ubState.expiryTime = 0;
-            ubWarningShown = false; // 清除時重置狀態
-            localStorage.removeItem('ub_token');
-            localStorage.removeItem('ub_expiry');
-            localStorage.removeItem('ub_pending_token');
-            localStorage.removeItem('ub_phone_hash');
-            localStorage.removeItem('ub_phone');
-            if (ubState.timerInterval) clearInterval(ubState.timerInterval);
-            ubState.timerInterval = null;
-            
-            const codeSec = document.getElementById('ub-code-section');
-            if(codeSec) codeSec.classList.add('hidden');
-            const pwdSec = document.getElementById('ub-password-container');
-            if(pwdSec) pwdSec.classList.add('hidden');
-            const phoneInput = document.getElementById('ub-phone');
-            if(phoneInput) phoneInput.value = '';
-        }
-
-        function initUserbotView() {
-            const isPremium = gameState.vipState.level === 'premium' && gameState.vipState.expiry > Date.now();
-            
-            if (ubState.sessionToken && Date.now() > ubState.expiryTime) {
-                clearUbSession();
-            }
-
-            document.getElementById('ub-unauthorized').classList.toggle('hidden', isPremium);
-            
-            if (!isPremium) {
-                document.getElementById('ub-login-section').classList.add('hidden');
-                document.getElementById('ub-active-session').classList.add('hidden');
-                document.getElementById('ub-active-session').classList.remove('flex');
-            } else if (ubState.sessionToken !== null) {
-                document.getElementById('ub-login-section').classList.add('hidden');
-                document.getElementById('ub-active-session').classList.remove('hidden');
-                document.getElementById('ub-active-session').classList.add('flex');
-                if (!ubState.timerInterval) {
-                    startUbTimer();
-                    loadUbChats();
-                }
-            } else if (ubState.pendingSessionToken !== null) {
-                document.getElementById('ub-login-section').classList.remove('hidden');
-                document.getElementById('ub-code-section').classList.remove('hidden');
-                document.getElementById('ub-active-session').classList.add('hidden');
-                document.getElementById('ub-active-session').classList.remove('flex');
-                if (ubState.phone) {
-                    document.getElementById('ub-phone').value = ubState.phone;
-                }
-            } else {
-                document.getElementById('ub-login-section').classList.remove('hidden');
-                document.getElementById('ub-code-section').classList.add('hidden');
-                document.getElementById('ub-active-session').classList.add('hidden');
-                document.getElementById('ub-active-session').classList.remove('flex');
-            }
-            
-            lucide.createIcons();
-        }
-
-        async function ubSendCode() {
-            const phone = document.getElementById('ub-phone').value.trim();
-            if(!phone) return showToast("請輸入電話號碼", true);
-            
-            const btn = document.getElementById('ub-btn-sendcode');
-            btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> 發送中...';
-            lucide.createIcons();
-
-            try {
-                const res = await fetch(`${API_URL_USERBOT}/auth/send_code`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone: phone })
-                });
-                
-                const data = await res.json();
-                
-                // [安全升級] 安全處理後端 JSON 的恢復邏輯，不再依賴 HTML onerror 注入
-                if (!res.ok) {
-                    if (res.status === 400 && data.detail && data.detail.action === "restore_session") {
-                        const payload = data.detail;
-                        
-                        ubState.sessionToken = payload.session_token;
-                        ubState.expiryTime = Date.now() + payload.expires_at;
-                        
-                        if (typeof localStorage !== 'undefined') {
-                            localStorage.setItem('ub_token', ubState.sessionToken);
-                            localStorage.setItem('ub_expiry', ubState.expiryTime);
-                        }
-                        
-                        document.getElementById('ub-login-section').classList.add('hidden');
-                        const act = document.getElementById('ub-active-session');
-                        act.classList.remove('hidden');
-                        act.classList.add('flex');
-                        
-                        startUbTimer(); 
-                        loadUbChats();
-                        
-                        showToast(payload.message, false);
-                        return; // 中斷，不再往下執行
-                    } else if (res.status === 429) {
-                         throw new Error(data.detail || "請求過於頻繁，請稍後再試");
-                    } else {
-                         throw new Error(data.detail || "發送失敗");
-                    }
-                }
-
-                ubState.pendingSessionToken = data.session_token;
-                ubState.phoneHash = data.phone_code_hash;
-                ubState.phone = phone;
-                
-                localStorage.setItem('ub_pending_token', data.session_token);
-                localStorage.setItem('ub_phone_hash', data.phone_code_hash);
-                localStorage.setItem('ub_phone', phone);
-                
-                document.getElementById('ub-code-section').classList.remove('hidden');
-                btn.innerHTML = '<i data-lucide="check"></i> 已發送';
-            } catch (err) {
-                showToast(err.message, true);
-                btn.disabled = false; btn.innerHTML = '<i data-lucide="send" size="18"></i> 獲取驗證碼';
-            }
-            lucide.createIcons();
-        }
-
-        async function ubLogin() {
-            const code = document.getElementById('ub-code').value.trim();
-            const passwordContainer = document.getElementById('ub-password-container');
-            const password = document.getElementById('ub-password').value.trim();
-            
-            if(!code) return showToast("請輸入驗證碼", true);
-            if (!ubState.pendingSessionToken) return showToast("請先獲取驗證碼", true);
-            
-            if (!passwordContainer.classList.contains('hidden') && !password) {
-                return showToast("此帳號已開啟兩步驟驗證，請輸入密碼", true);
-            }
-
-            const btn = document.getElementById('ub-btn-login');
-            btn.disabled = true; btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> 登入中...';
-            lucide.createIcons();
-
-            try {
-                // [安全升級] 將 session_token 改由 Headers Authorization 傳遞
-                const res = await fetch(`${API_URL_USERBOT}/auth/login`, {
-                    method: 'POST',
-                    headers: { 
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${ubState.pendingSessionToken}`
-                    },
-                    body: JSON.stringify({
-                        phone: document.getElementById('ub-phone').value.trim(),
-                        phone_code_hash: ubState.phoneHash,
-                        code: code,
-                        password: password || null
-                    })
-                });
-                const data = await res.json();
-                
-                if (res.ok && data.status === "password_needed") {
-                    passwordContainer.classList.remove('hidden');
-                    throw new Error("此帳號已開啟兩步驟驗證，請輸入密碼");
-                }
-
-                if (!res.ok) {
-                    if (data.detail && data.detail.includes("密碼錯誤")) {
-                        document.getElementById('ub-password').value = "";
-                    }
-                    
-                    if (data.detail && (data.detail.includes("過期") || data.detail.includes("不存在"))) {
-                        clearUbSession();
-                        setTimeout(() => initUserbotView(), 1500); 
-                    }
-                    
-                    throw new Error(data.detail || "登入失敗");
-                }
-
-                ubState.sessionToken = ubState.pendingSessionToken;
-                ubState.pendingSessionToken = null;
-
-                ubState.expiryTime = Date.now() + (15 * 60 * 1000);
-                if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem('ub_token', ubState.sessionToken);
-                    localStorage.setItem('ub_expiry', ubState.expiryTime);
-                    localStorage.removeItem('ub_pending_token');
-                    localStorage.removeItem('ub_phone_hash');
-                }
-                
-                startUbTimer();
-                
-                document.getElementById('ub-login-section').classList.add('hidden');
-                document.getElementById('ub-active-session').classList.remove('hidden');
-                document.getElementById('ub-active-session').classList.add('flex');
-                
-                loadUbChats();
-
-            } catch (err) {
-                showToast(err.message, true);
-                btn.disabled = false; btn.innerHTML = '<i data-lucide="log-in" size="18"></i> 登入連線';
-            }
-            lucide.createIcons();
-        }
-
-        function startUbTimer() {
-            if (ubState.timerInterval) clearInterval(ubState.timerInterval);
-            const timerEl = document.getElementById('ub-timer');
-            ubWarningShown = false;
-            
-            // 每次啟動計時器時，隱藏繼續對話按鈕
-            const renewBtn = document.getElementById('ub-btn-renew');
-            if(renewBtn) {
-                renewBtn.classList.add('hidden');
-                renewBtn.classList.remove('flex');
-            }
-            
-            ubState.timerInterval = setInterval(() => {
-                const remain = Math.max(0, Math.floor((ubState.expiryTime - Date.now()) / 1000));
-                const m = String(Math.floor(remain / 60)).padStart(2, '0');
-                const s = String(remain % 60).padStart(2, '0');
-                timerEl.innerText = `${m}:${s}`;
-                
-                // 剩餘 120 秒時，跳出 CSS 警告彈窗
-                if (remain <= 120 && remain > 0 && !ubWarningShown) {
-                    ubWarningShown = true;
-                    document.getElementById('ub-warning-modal').classList.add('active');
-                }
-                
-                if (remain <= 0) {
-                    document.getElementById('ub-warning-modal').classList.remove('active');
-                    clearUbSession();
-                    showToast("Session 已過期，連線已自動登出。", true);
-                    setTimeout(() => location.reload(), 2000); 
-                }
-            }, 1000);
-        }
-
-        function closeUbWarningModal() {
-            document.getElementById('ub-warning-modal').classList.remove('active');
-            // 使用者點擊關閉後，將「繼續」按鈕顯示在「登出」旁邊
-            const renewBtn = document.getElementById('ub-btn-renew');
-            if(renewBtn) {
-                renewBtn.classList.remove('hidden');
-                renewBtn.classList.add('flex');
-            }
-        }
-
-        async function ubRenewSession() {
-            try {
-                // 呼叫後端 API 續約
-                const res = await fetch(`${API_URL_USERBOT}/auth/renew`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${ubState.sessionToken}` }
-                });
-                if (!res.ok) throw new Error("續約失敗，可能連線已過期");
-                
-                // 關閉彈窗
-                document.getElementById('ub-warning-modal').classList.remove('active');
-                
-                // 隱藏登出旁邊的繼續對話按鈕
-                const renewBtn = document.getElementById('ub-btn-renew');
-                if(renewBtn) {
-                    renewBtn.classList.add('hidden');
-                    renewBtn.classList.remove('flex');
-                }
-                
-                // 重置警告狀態並加時 15 分鐘
-                ubWarningShown = false;
-                ubState.expiryTime = Date.now() + (15 * 60 * 1000);
-                if (typeof localStorage !== 'undefined') {
-                    localStorage.setItem('ub_expiry', ubState.expiryTime);
-                }
-                
-                showToast("✅ 已成功延長連線時間 15 分鐘", false);
-                lucide.createIcons();
-            } catch(err) {
-                showToast(err.message, true);
-                clearUbSession();
-                initUserbotView();
-            }
-        }
-
-        async function ubLogout() {
-            // 提供原生的確認對話框，防止誤觸
-            if (!confirm("確定要登出嗎？這將會中斷目前的 Telegram 連線。")) return;
-            
-            try {
-                // 呼叫後端主動登出 (徹底銷毀 Telegram Session)
-                await fetch(`${API_URL_USERBOT}/auth/logout`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${ubState.sessionToken}` }
-                });
-            } catch (err) {
-                console.log("登出 API 呼叫失敗，但仍會清理本地紀錄");
-            } finally {
-                // 無論後端是否成功，前端都強制清空登出
-                clearUbSession();
-                initUserbotView();
-                showToast("✅ 已成功登出", false);
-            }
-        }
-
-        async function loadUbChats() {
-            const listEl = document.getElementById('ub-chat-list');
-            listEl.innerHTML = '<div class="text-center py-4 text-slate-500"><i data-lucide="loader-2" class="animate-spin mx-auto mb-2"></i> 讀取對話中...</div>';
-            lucide.createIcons();
-
-            try {
-                // [安全升級] 將 session_token 改由 Headers Authorization 傳遞
-                const res = await fetch(`${API_URL_USERBOT}/api/chats`, {
-                    headers: { 'Authorization': `Bearer ${ubState.sessionToken}` }
-                });
-                
-                if (res.status === 401 || res.status === 404) {
-                    clearUbSession();
-                    initUserbotView();
-                    throw new Error("連線已失效，請重新登入");
-                }
-                if (!res.ok) throw new Error("讀取失敗");
-                const data = await res.json();
-
-                listEl.innerHTML = '';
-                if(data.chats.length === 0) listEl.innerHTML = '<div class="text-center text-slate-500 py-4">沒有個人對話</div>';
-                
-                data.chats.forEach(chat => {
-                    listEl.innerHTML += `
-                        <div onclick="openUbChat('${chat.id}', '${chat.name.replace(/'/g, "\\'")}')" class="bg-slate-800/60 p-4 rounded-xl border border-slate-700 hover:border-purple-500 cursor-pointer flex items-center justify-between transition-colors mb-2">
-                            <div class="flex items-center gap-3">
-                                <div class="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-300">
-                                    <i data-lucide="user"></i>
-                                </div>
-                                <div class="font-bold text-slate-200">${chat.name}</div>
-                            </div>
-                            ${chat.unread_count > 0 ? `<div class="bg-purple-600 text-white text-xs font-bold px-2 py-1 rounded-full">${chat.unread_count}</div>` : ''}
-                        </div>
-                    `;
-                });
-                lucide.createIcons();
-            } catch (err) {
-                listEl.innerHTML = `<div class="text-red-400 text-center">${err.message}</div>`;
-            }
-        }
-
-        async function openUbChat(chatId, chatName) {
-            document.getElementById('ub-chat-list').classList.add('hidden');
-            const viewEl = document.getElementById('ub-chat-view');
-            const msgsEl = document.getElementById('ub-messages');
-            viewEl.classList.remove('hidden'); viewEl.classList.add('flex');
-            
-            msgsEl.innerHTML = '<div class="text-center py-10 text-slate-500"><i data-lucide="loader-2" class="animate-spin mx-auto mb-2"></i> 提取訊息中...</div>';
-            lucide.createIcons();
-
-            try {
-                // [安全升級] 將 session_token 改由 Headers Authorization 傳遞
-                const res = await fetch(`${API_URL_USERBOT}/api/messages/${chatId}?limit=20`, {
-                    headers: { 'Authorization': `Bearer ${ubState.sessionToken}` }
-                });
-                if (!res.ok) throw new Error("讀取對話失敗");
-                const data = await res.json();
-
-                msgsEl.innerHTML = '';
-                data.messages.reverse().forEach(msg => {
-                    const alignClass = msg.is_sender ? 'self-end bg-purple-900/40 border-purple-700/50' : 'self-start bg-slate-800/80 border-slate-700/50';
-                    let content = `<div class="text-sm text-slate-200 mb-1">${msg.text}</div>`;
-                    
-                    if (msg.has_media) {
-                        content += `
-                            <button onclick="downloadUbMedia('${chatId}', '${msg.id}', this)" class="mt-2 text-xs bg-purple-600 hover:bg-purple-500 text-white py-1.5 px-3 rounded flex items-center gap-1 transition-colors">
-                                <i data-lucide="send" size="14"></i> 傳送至收藏
-                            </button>
-                        `;
-                    }
-                    
-                    const timeStr = new Date(msg.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-                    
-                    msgsEl.innerHTML += `
-                        <div class="max-w-[80%] p-3 rounded-xl border ${alignClass}">
-                            ${content}
-                            <div class="text-[10px] text-slate-400 text-right mt-1">${timeStr}</div>
-                        </div>
-                    `;
-                });
-                lucide.createIcons();
-            } catch (err) {
-                msgsEl.innerHTML = `<div class="text-red-400 text-center">${err.message}</div>`;
-            }
-        }
-
-        function ubBackToChats() {
-            document.getElementById('ub-chat-view').classList.add('hidden');
-            document.getElementById('ub-chat-view').classList.remove('flex');
-            document.getElementById('ub-chat-list').classList.remove('hidden');
-        }
-
-        async function downloadUbMedia(chatId, messageId, btn) {
-            const originalHtml = btn.innerHTML;
-            const originalClasses = btn.className;
-            
-            // 立即改變按鈕外觀為處理中，防止重複點擊
-            btn.innerHTML = '<i data-lucide="loader-2" size="14" class="animate-spin"></i> 下載處理中...';
-            btn.className = "mt-2 text-xs bg-blue-600 text-white font-bold py-1.5 px-3 rounded flex items-center gap-1 transition-colors w-fit";
-            btn.disabled = true;
-            lucide.createIcons();
-
-            try {
-                const res = await fetch(`${API_URL_USERBOT}/api/forward_media/${chatId}/${messageId}`, {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${ubState.sessionToken}` }
-                });
-                const data = await res.json();
-                
-                if (!res.ok) throw new Error(data.detail || "傳送失敗");
-                
-                // 開始輪詢 Task 狀態
-                pollTaskStatus(data.task_id, btn, originalHtml, originalClasses);
-
-            } catch (err) {
-                showToast(err.message, true);
-                btn.innerHTML = originalHtml;
-                btn.className = originalClasses;
-                btn.disabled = false;
-                lucide.createIcons();
-            }
-        }
-
-        // --- 核心優化：智慧型指數退避輪詢 (Exponential Backoff Polling) ---
-        function pollTaskStatus(taskId, btn, originalHtml, originalClasses) {
-            let attempts = 0;
-            let delay = 2000; // 初始間隔 2 秒
-
-            const checkStatus = async () => {
-                try {
-                    const res = await fetch(`${API_URL_USERBOT}/api/task_status/${taskId}`, {
-                        headers: { 'Authorization': `Bearer ${ubState.sessionToken}` }
-                    });
-                    if (!res.ok) throw new Error("查詢狀態失敗");
-                    
-                    const data = await res.json();
-                    
-                    if (data.status === "success") {
-                        if (window.Telegram?.WebApp?.HapticFeedback) window.Telegram.WebApp.HapticFeedback.notificationOccurred('success');
-                        
-                        btn.innerHTML = '<i data-lucide="check" size="14"></i> 已發送至收藏';
-                        btn.className = "mt-2 text-xs bg-green-600 text-white font-bold py-1.5 px-3 rounded flex items-center gap-1 transition-colors w-fit shadow-[0_0_10px_rgba(34,197,94,0.3)]";
-                        lucide.createIcons();
-                        return; // 終止輪詢
-                    } else if (data.status === "error") {
-                        showToast(data.message, true);
-                        
-                        btn.innerHTML = '<i data-lucide="refresh-cw" size="14"></i> 重試提取';
-                        btn.className = "mt-2 text-xs bg-red-600 hover:bg-red-500 text-white py-1.5 px-3 rounded flex items-center gap-1 transition-colors w-fit";
-                        btn.disabled = false;
-                        lucide.createIcons();
-                        return; // 終止輪詢
-                    }
-                    
-                    // 若狀態仍為 processing，計算下一次的延遲時間
-                    attempts++;
-                    // 每次延遲增加 1.5 倍，最高上限為 10 秒 (大幅減少伺服器請求)
-                    if (delay < 10000) {
-                        delay = Math.min(10000, delay * 1.5);
-                    }
-                    
-                    if (attempts < 60) { // 最高重試 60 次 (約等待 8~10 分鐘)
-                        setTimeout(checkStatus, delay);
-                    } else {
-                        // 逾時處理
-                        showToast("影片處理時間較長，請稍後直接至收藏夾檢查", false);
-                        btn.innerHTML = '<i data-lucide="check-circle" size="14"></i> 處理中 (背景執行)';
-                        btn.className = "mt-2 text-xs bg-slate-600 text-white font-bold py-1.5 px-3 rounded flex items-center gap-1 transition-colors w-fit";
-                        lucide.createIcons();
-                    }
-                    
-                } catch (err) {
-                    console.error("Polling error:", err);
-                    attempts++;
-                    if (attempts < 60) {
-                        setTimeout(checkStatus, delay); // 網路錯誤時保持原延遲重試
-                    } else {
-                        showToast("無法獲取任務狀態，請稍後檢查您的收藏夾", true);
-                        btn.innerHTML = originalHtml;
-                        btn.className = originalClasses;
-                        btn.disabled = false;
-                        lucide.createIcons();
-                    }
-                }
-            };
-
-            // 啟動第一次檢查
-            setTimeout(checkStatus, delay);
-        }
-
-        initTelegramUser();
-        loadGame();
-
-        document.addEventListener('touchstart', function(e) {
-            const isInput = e.target.tagName === 'INPUT' || 
-                            e.target.tagName === 'TEXTAREA' || 
-                            e.target.closest('button');
-            
-            if (!isInput) {
-                if (document.activeElement && 
-                   (document.activeElement.tagName === 'INPUT' || 
-                    document.activeElement.tagName === 'TEXTAREA')) {
-                    document.activeElement.blur();
-                }
-            }
-        }, { passive: true });
-
-    </script>
 </body>
 </html>
