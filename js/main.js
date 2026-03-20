@@ -1,5 +1,8 @@
 // js/main.js
 
+// [新增] 在檔案最頂端宣告全域變數，用來儲存使用者的 Telegram ID
+window.tgUserId = null; 
+
 /**
  * 初始化 Telegram WebApp 使用者資料
  */
@@ -10,6 +13,7 @@ function initTelegramUser() {
         try { tg.expand(); } catch(e) {}
         const user = tg.initDataUnsafe?.user;
         if (user) {
+            window.tgUserId = user.id; // [新增] 儲存使用者的 User ID
             document.getElementById('tg-username').textContent = user.username ? `@${user.username}` : user.first_name;
             document.getElementById('tg-userid').textContent = `ID: ${user.id}`;
         } else {
