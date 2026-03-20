@@ -39,27 +39,62 @@ function clearUbSession() {
 /**
  * 初始化 Userbot 分頁的顯示狀態
  */
-function initUserbotView() {
+async function initUserbotView() {
     // 判斷是否具備高級 VIP 資格 (依賴 config.js 裡的 gameState)
     const isPremium = gameState.vipState.level === 'premium' && gameState.vipState.expiry > Date.now();
+    let hasAccess = isPremium;
     
     // 檢查 Session 是否已過期
     if (ubState.sessionToken && Date.now() > ubState.expiryTime) {
         clearUbSession();
     }
 
-    // 依據 VIP 資格切換權限畫面
-    document.getElementById('ub-unauthorized').classList.toggle('hidden', isPremium);
+    // [新增] 如果不是高級 VIP，且抓得到 TG User ID，向後端檢查是否符合「週末+討論群」資格
+    if (!hasAccess && window.tgUserId) {
+        const upgradeBtn = document.getElementById('ub-upgrade-btn');
+        if (upgradeBtn) {
+            upgradeBtn.disabled = true;
+            upgradeBtn.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> 檢查週末福利資格...';
+            if (window.lucide) lucide.createIcons();
+        }
+
+        try {
+            const res = await fetch(`${API_URL_USERBOT}/api/check_weekend_access/${window.tgUserId}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.has_access) {
+                    hasAccess = true;
+                }
+            }
+        } catch (e) {
+            console.error("檢查週末權限失敗:", e);
+        }
+
+        // 恢復按鈕狀態
+        if (upgradeBtn && !hasAccess) {
+            upgradeBtn.disabled = false;
+            upgradeBtn.innerHTML = '升級高級 VIP 解鎖';
+            if (window.lucide) lucide.createIcons();
+        }
+    }
+
+    // 依據最終資格 (hasAccess) 切換權限畫面
+    const unauthorizedEl = document.getElementById('ub-unauthorized');
+    const loginSec = document.getElementById('ub-login-section');
+    const codeSec = document.getElementById('ub-code-section');
+    const activeSec = document.getElementById('ub-active-session');
+
+    unauthorizedEl.classList.toggle('hidden', hasAccess);
     
-    if (!isPremium) {
-        document.getElementById('ub-login-section').classList.add('hidden');
-        document.getElementById('ub-active-session').classList.add('hidden');
-        document.getElementById('ub-active-session').classList.remove('flex');
+    if (!hasAccess) {
+        loginSec.classList.add('hidden');
+        activeSec.classList.add('hidden');
+        activeSec.classList.remove('flex');
     } else if (ubState.sessionToken !== null) {
         // 已登入狀態
-        document.getElementById('ub-login-section').classList.add('hidden');
-        document.getElementById('ub-active-session').classList.remove('hidden');
-        document.getElementById('ub-active-session').classList.add('flex');
+        loginSec.classList.add('hidden');
+        activeSec.classList.remove('hidden');
+        activeSec.classList.add('flex');
         
         if (!ubState.timerInterval) {
             startUbTimer();
@@ -68,19 +103,19 @@ function initUserbotView() {
         }
     } else if (ubState.pendingSessionToken !== null) {
         // 等待驗證碼狀態
-        document.getElementById('ub-login-section').classList.remove('hidden');
-        document.getElementById('ub-code-section').classList.remove('hidden');
-        document.getElementById('ub-active-session').classList.add('hidden');
-        document.getElementById('ub-active-session').classList.remove('flex');
+        loginSec.classList.remove('hidden');
+        codeSec.classList.remove('hidden');
+        activeSec.classList.add('hidden');
+        activeSec.classList.remove('flex');
         if (ubState.phone) {
             document.getElementById('ub-phone').value = ubState.phone;
         }
     } else {
         // 全新登入狀態
-        document.getElementById('ub-login-section').classList.remove('hidden');
-        document.getElementById('ub-code-section').classList.add('hidden');
-        document.getElementById('ub-active-session').classList.add('hidden');
-        document.getElementById('ub-active-session').classList.remove('flex');
+        loginSec.classList.remove('hidden');
+        codeSec.classList.add('hidden');
+        activeSec.classList.add('hidden');
+        activeSec.classList.remove('flex');
     }
     
     if (window.lucide) lucide.createIcons();
