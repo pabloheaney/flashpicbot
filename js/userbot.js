@@ -1,10 +1,7 @@
 // js/userbot.js
 
-let ubWarningShown = false; // 控制彈窗不要一直跳
+let ubWarningShown = false; 
 
-/**
- * 清除本地的所有 Userbot 狀態與紀錄
- */
 function clearUbSession() {
     ubState.sessionToken = null;
     ubState.pendingSessionToken = null;
@@ -22,12 +19,10 @@ function clearUbSession() {
     if (ubState.timerInterval) clearInterval(ubState.timerInterval);
     ubState.timerInterval = null;
     
-    // 同步停止任務輪詢
     if (typeof stopTaskPolling === 'function') {
         stopTaskPolling();
     }
     
-    // UI 清理
     const codeSec = document.getElementById('ub-code-section');
     if(codeSec) codeSec.classList.add('hidden');
     const pwdSec = document.getElementById('ub-password-container');
@@ -36,20 +31,14 @@ function clearUbSession() {
     if(phoneInput) phoneInput.value = '';
 }
 
-/**
- * 初始化 Userbot 分頁的顯示狀態
- */
 async function initUserbotView() {
-    // 判斷是否具備高級 VIP 資格 (依賴 config.js 裡的 gameState)
     const isPremium = gameState.vipState.level === 'premium' && gameState.vipState.expiry > Date.now();
     let hasAccess = isPremium;
     
-    // 檢查 Session 是否已過期
     if (ubState.sessionToken && Date.now() > ubState.expiryTime) {
         clearUbSession();
     }
 
-    // [新增] 如果不是高級 VIP，且抓得到 TG User ID，向後端檢查是否符合「週末+討論群」資格
     if (!hasAccess && window.tgUserId) {
         const upgradeBtn = document.getElementById('ub-upgrade-btn');
         if (upgradeBtn) {
@@ -70,7 +59,10 @@ async function initUserbotView() {
             console.error("檢查週末權限失敗:", e);
         }
 
-        // 恢復按鈕狀態
+        if (gameState.vipState.level === 'premium' && gameState.vipState.expiry > Date.now()) {
+            hasAccess = true;
+        }
+
         if (upgradeBtn && !hasAccess) {
             upgradeBtn.disabled = false;
             upgradeBtn.innerHTML = '升級高級 VIP 解鎖';
@@ -78,7 +70,6 @@ async function initUserbotView() {
         }
     }
 
-    // 依據最終資格 (hasAccess) 切換權限畫面
     const unauthorizedEl = document.getElementById('ub-unauthorized');
     const loginSec = document.getElementById('ub-login-section');
     const codeSec = document.getElementById('ub-code-section');
@@ -91,7 +82,6 @@ async function initUserbotView() {
         activeSec.classList.add('hidden');
         activeSec.classList.remove('flex');
     } else if (ubState.sessionToken !== null) {
-        // 已登入狀態
         loginSec.classList.add('hidden');
         activeSec.classList.remove('hidden');
         activeSec.classList.add('flex');
@@ -99,10 +89,9 @@ async function initUserbotView() {
         if (!ubState.timerInterval) {
             startUbTimer();
             loadUbChats();
-            if (typeof startTaskPolling === 'function') startTaskPolling(); // 啟動任務管理器
+            if (typeof startTaskPolling === 'function') startTaskPolling();
         }
     } else if (ubState.pendingSessionToken !== null) {
-        // 等待驗證碼狀態
         loginSec.classList.remove('hidden');
         codeSec.classList.remove('hidden');
         activeSec.classList.add('hidden');
@@ -111,7 +100,6 @@ async function initUserbotView() {
             document.getElementById('ub-phone').value = ubState.phone;
         }
     } else {
-        // 全新登入狀態
         loginSec.classList.remove('hidden');
         codeSec.classList.add('hidden');
         activeSec.classList.add('hidden');
@@ -121,9 +109,6 @@ async function initUserbotView() {
     if (window.lucide) lucide.createIcons();
 }
 
-/**
- * 請求發送驗證碼
- */
 async function ubSendCode() {
     const phone = document.getElementById('ub-phone').value.trim();
     if(!phone) return showToast("請輸入電話號碼", true);
@@ -143,7 +128,6 @@ async function ubSendCode() {
         const data = await res.json();
         
         if (!res.ok) {
-            // 處理 Session 恢復邏輯
             if (res.status === 400 && data.detail && data.detail.action === "restore_session") {
                 const payload = data.detail;
                 
@@ -173,7 +157,6 @@ async function ubSendCode() {
             }
         }
 
-        // 保存等待狀態
         ubState.pendingSessionToken = data.session_token;
         ubState.phoneHash = data.phone_code_hash;
         ubState.phone = phone;
@@ -192,9 +175,6 @@ async function ubSendCode() {
     if (window.lucide) lucide.createIcons();
 }
 
-/**
- * 登入並建立連線
- */
 async function ubLogin() {
     const code = document.getElementById('ub-code').value.trim();
     const passwordContainer = document.getElementById('ub-password-container');
@@ -244,7 +224,6 @@ async function ubLogin() {
             throw new Error(data.detail || "登入失敗");
         }
 
-        // 登入成功，轉換 Token
         ubState.sessionToken = ubState.pendingSessionToken;
         ubState.pendingSessionToken = null;
         ubState.expiryTime = Date.now() + (15 * 60 * 1000);
@@ -273,9 +252,6 @@ async function ubLogin() {
     if (window.lucide) lucide.createIcons();
 }
 
-/**
- * 啟動連線倒數計時器
- */
 function startUbTimer() {
     if (ubState.timerInterval) clearInterval(ubState.timerInterval);
     const timerEl = document.getElementById('ub-timer');
@@ -316,9 +292,6 @@ function closeUbWarningModal() {
     }
 }
 
-/**
- * 延長連線時間
- */
 async function ubRenewSession() {
     try {
         const res = await fetch(`${API_URL_USERBOT}/auth/renew`, {
@@ -348,9 +321,6 @@ async function ubRenewSession() {
     }
 }
 
-/**
- * 登出並中止連線
- */
 async function ubLogout() {
     if (!confirm("確定要登出嗎？這將會中斷目前的 Telegram 連線與所有未完成的任務。")) return;
     
@@ -368,9 +338,6 @@ async function ubLogout() {
     }
 }
 
-/**
- * 載入使用者對話列表
- */
 async function loadUbChats() {
     const listEl = document.getElementById('ub-chat-list');
     listEl.innerHTML = '<div class="text-center py-4 text-slate-500"><i data-lucide="loader-2" class="animate-spin mx-auto mb-2"></i> 讀取對話中...</div>';
@@ -393,7 +360,6 @@ async function loadUbChats() {
         if(data.chats.length === 0) listEl.innerHTML = '<div class="text-center text-slate-500 py-4">沒有個人對話</div>';
         
         data.chats.forEach(chat => {
-            // 安全處理單引號
             const safeName = chat.name.replace(/'/g, "\\'");
             listEl.innerHTML += `
                 <div onclick="openUbChat('${chat.id}', '${safeName}')" class="bg-slate-800/60 p-4 rounded-xl border border-slate-700 hover:border-purple-500 cursor-pointer flex items-center justify-between transition-colors mb-2">
@@ -413,9 +379,6 @@ async function loadUbChats() {
     }
 }
 
-/**
- * 開啟特定對話並渲染訊息 (包含 TaskManager 狀態映射)
- */
 async function openUbChat(chatId, chatName) {
     document.getElementById('ub-chat-list').classList.add('hidden');
     const viewEl = document.getElementById('ub-chat-view');
@@ -436,7 +399,6 @@ async function openUbChat(chatId, chatName) {
         data.messages.reverse().forEach(msg => {
             const alignClass = msg.is_sender ? 'self-end bg-purple-900/40 border-purple-700/50' : 'self-start bg-slate-800/80 border-slate-700/50';
             
-            // 安全插入文字
             let textNode = document.createElement('div');
             textNode.textContent = msg.text;
             let textHtml = textNode.innerHTML;
@@ -444,7 +406,6 @@ async function openUbChat(chatId, chatName) {
             let content = `<div class="text-sm text-slate-200 mb-1">${textHtml}</div>`;
             
             if (msg.has_media) {
-                // 【核心串接】檢查全局任務狀態，預先渲染正確的按鈕外觀！
                 const taskInfo = window.globalTaskRegistry ? window.globalTaskRegistry[msg.id] : null;
                 const btnStatus = taskInfo ? taskInfo.status : 'none';
                 
@@ -465,7 +426,6 @@ async function openUbChat(chatId, chatName) {
                     btnClass = "mt-2 text-xs bg-red-600 hover:bg-red-500 text-white py-1.5 px-3 rounded flex items-center gap-1 transition-colors w-fit";
                 }
                 
-                // 加上 data-msg-id 讓 task_manager.js 可以精準抓取
                 content += `
                     <button onclick="downloadUbMedia('${chatId}', '${msg.id}', this)" 
                             data-msg-id="${msg.id}" 
