@@ -1,6 +1,8 @@
-// js/userbot.js
-
-let ubWarningShown = false; 
+let ubWarningShown = false;
+let currentChatId = null;
+let currentOffsetId = 0;
+let isFetchingMessages = false;
+let hasMoreMessages = true;
 
 function clearUbSession() {
     ubState.sessionToken = null;
@@ -313,7 +315,7 @@ async function ubRenewSession() {
             localStorage.setItem('ub_expiry', ubState.expiryTime);
         }
         
-        showToast("✅ 已成功延長連線時間 15 分鐘", false);
+        showToast("已成功延長連線時間 15 分鐘", false);
     } catch(err) {
         showToast(err.message, true);
         clearUbSession();
@@ -330,11 +332,11 @@ async function ubLogout() {
             headers: { 'Authorization': `Bearer ${ubState.sessionToken}` }
         });
     } catch (err) {
-        console.log("登出 API 呼叫失敗，但仍會清理本地紀錄");
+        console.log(err.message);
     } finally {
         clearUbSession();
         initUserbotView();
-        showToast("✅ 已成功登出", false);
+        showToast("已成功登出", false);
     }
 }
 
@@ -385,17 +387,63 @@ async function openUbChat(chatId, chatName) {
     const msgsEl = document.getElementById('ub-messages');
     viewEl.classList.remove('hidden'); viewEl.classList.add('flex');
     
+    currentChatId = chatId;
+    currentOffsetId = 0;
+    isFetchingMessages = false;
+    hasMoreMessages = true;
+    
     msgsEl.innerHTML = '<div class="text-center py-10 text-slate-500"><i data-lucide="loader-2" class="animate-spin mx-auto mb-2"></i> 提取訊息中...</div>';
     if (window.lucide) lucide.createIcons();
 
+    msgsEl.onscroll = () => {
+        if (msgsEl.scrollTop <= 10 && !isFetchingMessages && hasMoreMessages) {
+            loadMoreMessages();
+        }
+    };
+
+    await loadMoreMessages(true);
+}
+
+async function loadMoreMessages(isInitial = false) {
+    if (isFetchingMessages || !hasMoreMessages) return;
+    isFetchingMessages = true;
+    
+    const msgsEl = document.getElementById('ub-messages');
+    const loaderId = 'ub-msg-loader';
+    
+    if (!isInitial) {
+        msgsEl.insertAdjacentHTML('afterbegin', `<div id="${loaderId}" class="text-center py-2 text-slate-500 text-xs flex items-center justify-center gap-1"><i data-lucide="loader-2" class="animate-spin w-3 h-3"></i> 載入舊訊息...</div>`);
+        if (window.lucide) lucide.createIcons();
+    }
+
     try {
-        const res = await fetch(`${API_URL_USERBOT}/api/messages/${chatId}?limit=20`, {
+        const res = await fetch(`${API_URL_USERBOT}/api/messages/${currentChatId}?limit=20&offset_id=${currentOffsetId}`, {
             headers: { 'Authorization': `Bearer ${ubState.sessionToken}` }
         });
         if (!res.ok) throw new Error("讀取對話失敗");
         const data = await res.json();
 
-        msgsEl.innerHTML = '';
+        if (!isInitial) {
+            const loader = document.getElementById(loaderId);
+            if (loader) loader.remove();
+        }
+
+        if (!data.messages || data.messages.length === 0) {
+            hasMoreMessages = false;
+            if (!isInitial) {
+                msgsEl.insertAdjacentHTML('afterbegin', `<div class="text-center py-2 text-slate-600 text-[10px]">已經沒有更早的訊息了</div>`);
+            } else {
+                msgsEl.innerHTML = `<div class="text-center py-10 text-slate-500">目前沒有訊息</div>`;
+            }
+            isFetchingMessages = false;
+            return;
+        }
+
+        if (isInitial) msgsEl.innerHTML = '';
+
+        const prevScrollHeight = msgsEl.scrollHeight;
+
+        let htmlContent = '';
         data.messages.reverse().forEach(msg => {
             const alignClass = msg.is_sender ? 'self-end bg-purple-900/40 border-purple-700/50' : 'self-start bg-slate-800/80 border-slate-700/50';
             
@@ -427,7 +475,7 @@ async function openUbChat(chatId, chatName) {
                 }
                 
                 content += `
-                    <button onclick="downloadUbMedia('${chatId}', '${msg.id}', this)" 
+                    <button onclick="downloadUbMedia('${currentChatId}', '${msg.id}', this)" 
                             data-msg-id="${msg.id}" 
                             data-task-status="${btnStatus}"
                             ${btnDisabled}
@@ -439,20 +487,37 @@ async function openUbChat(chatId, chatName) {
             
             const timeStr = new Date(msg.date).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             
-            msgsEl.innerHTML += `
+            htmlContent += `
                 <div class="max-w-[80%] p-3 rounded-xl border ${alignClass}">
                     ${content}
                     <div class="text-[10px] text-slate-400 text-right mt-1">${timeStr}</div>
                 </div>
             `;
         });
+
+        currentOffsetId = Math.min(...data.messages.map(m => parseInt(m.id)));
+
+        msgsEl.insertAdjacentHTML('afterbegin', htmlContent);
         if (window.lucide) lucide.createIcons();
+
+        requestAnimationFrame(() => {
+            if (isInitial) {
+                msgsEl.scrollTop = msgsEl.scrollHeight;
+            } else {
+                msgsEl.scrollTop = msgsEl.scrollHeight - prevScrollHeight;
+            }
+        });
+
     } catch (err) {
-        msgsEl.innerHTML = `<div class="text-red-400 text-center">${err.message}</div>`;
+        if (isInitial) msgsEl.innerHTML = `<div class="text-red-400 text-center">${err.message}</div>`;
+        else showToast("無法載入舊訊息", true);
+    } finally {
+        isFetchingMessages = false;
     }
 }
 
 function ubBackToChats() {
+    document.getElementById('ub-messages').onscroll = null;
     document.getElementById('ub-chat-view').classList.add('hidden');
     document.getElementById('ub-chat-view').classList.remove('flex');
     document.getElementById('ub-chat-list').classList.remove('hidden');
