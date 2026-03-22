@@ -103,13 +103,12 @@
             </div>
 
             <div id="view-userbot" class="slide-page">
-                <div class="w-full max-w-3xl px-4 mt-2 flex flex-col overflow-hidden" style="height: calc(100vh - 190px); height: calc(100dvh - 190px);">
-                    
-                    <div class="flex items-center justify-center gap-2 mb-4 text-2xl font-bold text-purple-400 border-b border-slate-700/50 pb-2 flex-shrink-0">
+                <div class="w-full max-w-3xl px-4 mt-4 relative min-h-[70vh]">
+                    <div class="flex items-center justify-center gap-2 mb-4 text-2xl font-bold text-purple-400 border-b border-slate-700/50 pb-3">
                         <i data-lucide="smartphone"></i>私閃CAP圖功能
                     </div>
 
-                    <div id="ub-unauthorized" class="hidden flex-col items-center justify-center py-10 flex-shrink-0 overflow-y-auto">
+                    <div id="ub-unauthorized" class="hidden flex-col items-center justify-center py-10">
                         <div class="bg-slate-800/80 border border-slate-700 rounded-2xl p-6 text-center shadow-xl w-full">
                             <div class="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mx-auto mb-4 border-2 border-purple-500/50 shadow-[0_0_15px_rgba(168,85,247,0.3)]">
                                 <i data-lucide="crown" class="w-8 h-8 text-purple-400"></i>
@@ -135,7 +134,7 @@
                         </div>
                     </div>
 
-                    <div id="ub-login-section" class="hidden flex-col gap-4 flex-shrink-0 overflow-y-auto">
+                    <div id="ub-login-section" class="hidden flex-col gap-4">
                         <div class="bg-slate-800/50 p-5 rounded-xl border border-slate-700">
                             <label class="text-sm text-slate-400 mb-2 block">請先登入至 Telegram (需要輸入國際電話號碼，例如香港號碼輸入+85212345678)</label>
                             <input type="text" id="ub-phone" placeholder="+85212345678" class="w-full bg-slate-900 border border-slate-600 rounded-lg p-3 text-white focus:border-purple-500 focus:outline-none mb-4 transition-colors">
@@ -162,9 +161,9 @@
                         </div>
                     </div>
 
-                    <div id="ub-active-session" class="hidden flex-col flex-1 min-h-0">
-                        <div class="bg-slate-800/60 border border-purple-500/30 rounded-xl p-3 flex flex-col mb-3 shadow-[0_0_15px_rgba(168,85,247,0.1)] flex-shrink-0">
-                            <div class="flex items-center justify-between mb-2">
+                    <div id="ub-active-session" class="hidden flex-col h-full pb-10">
+                        <div class="bg-slate-800/60 border border-purple-500/30 rounded-xl p-4 flex flex-col mb-4 shadow-[0_0_15px_rgba(168,85,247,0.1)]">
+                            <div class="flex items-center justify-between mb-3">
                                 <div class="flex items-center gap-2 text-purple-300 font-bold text-sm">
                                     <i data-lucide="timer" class="animate-pulse text-purple-400 w-4 h-4"></i> 自動登出倒數
                                 </div>
@@ -180,14 +179,14 @@
                             </div>
                         </div>
 
-                        <div id="ub-chat-list" class="space-y-2 overflow-y-auto flex-1 min-h-0 pr-2 pb-2 custom-scrollbar">
+                        <div id="ub-chat-list" class="space-y-2 overflow-y-auto max-h-[50vh] pr-2">
                             </div>
 
-                        <div id="ub-chat-view" class="hidden flex-col flex-1 min-h-0">
-                            <button onclick="ubBackToChats()" class="mb-3 text-slate-400 hover:text-white flex items-center gap-1 text-sm bg-slate-800/50 w-fit px-3 py-1.5 rounded-lg border border-slate-700 flex-shrink-0">
+                        <div id="ub-chat-view" class="hidden flex-col">
+                            <button onclick="ubBackToChats()" class="mb-4 text-slate-400 hover:text-white flex items-center gap-1 text-sm bg-slate-800/50 w-fit px-3 py-1.5 rounded-lg border border-slate-700">
                                 <i data-lucide="arrow-left" size="16"></i> 返回列表
                             </button>
-                            <div id="ub-messages" class="space-y-4 overflow-y-auto flex-1 min-h-0 pr-2 flex flex-col pb-2 custom-scrollbar">
+                            <div id="ub-messages" class="space-y-4 overflow-y-auto max-h-[50vh] pr-2 flex flex-col">
                                 </div>
                         </div>
                     </div>
