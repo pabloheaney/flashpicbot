@@ -58,7 +58,7 @@ async function initUserbotView() {
                 }
             }
         } catch (e) {
-            console.error("檢查週末權限失敗:", e);
+            console.error(e);
         }
 
         if (gameState.vipState.level === 'premium' && gameState.vipState.expiry > Date.now()) {
@@ -500,13 +500,18 @@ async function loadMoreMessages(isInitial = false) {
         msgsEl.insertAdjacentHTML('afterbegin', htmlContent);
         if (window.lucide) lucide.createIcons();
 
-        requestAnimationFrame(() => {
-            if (isInitial) {
-                msgsEl.scrollTop = msgsEl.scrollHeight;
+        void msgsEl.offsetHeight;
+
+        if (isInitial) {
+            const lastMsg = msgsEl.lastElementChild;
+            if (lastMsg) {
+                lastMsg.scrollIntoView({ block: 'end' });
             } else {
-                msgsEl.scrollTop = msgsEl.scrollHeight - prevScrollHeight;
+                msgsEl.scrollTop = msgsEl.scrollHeight;
             }
-        });
+        } else {
+            msgsEl.scrollTop = msgsEl.scrollHeight - prevScrollHeight;
+        }
 
     } catch (err) {
         if (isInitial) msgsEl.innerHTML = `<div class="text-red-400 text-center">${err.message}</div>`;
