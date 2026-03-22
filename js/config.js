@@ -4,7 +4,7 @@
 // 1. API 網址設定
 // ==========================================
 const API_URL_GACHA = "https://api.atlrunner.dpdns.org"; 
-const API_URL_ANNOUNCE = "https://atlrunner.dpdns.org";
+const API_URL_ANNOUNCE = "https://status.atlrunner.dpdns.org";
 const API_URL_USERBOT = "https://api2.atlrunner.dpdns.org"; 
 
 // ==========================================
