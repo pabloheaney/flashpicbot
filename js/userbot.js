@@ -392,7 +392,7 @@ async function openUbChat(chatId, chatName) {
     isFetchingMessages = false;
     hasMoreMessages = true;
     
-    msgsEl.innerHTML = '<div class="text-center py-10 text-slate-500"><i data-lucide="loader-2" class="animate-spin mx-auto mb-2"></i> 提取訊息中...</div>';
+    msgsEl.innerHTML = '<div class="text-center py-10 text-slate-500"><i data-lucide="loader-2" class="animate-spin mx-auto mb-2"></i> 讀取訊息中...</div>';
     if (window.lucide) lucide.createIcons();
 
     msgsEl.onscroll = () => {
